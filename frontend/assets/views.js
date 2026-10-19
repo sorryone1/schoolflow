@@ -34,7 +34,7 @@ route('/register', () => html`<div class="auth">${authSide}<div class="auth-r"><
   <div class="fld"><label for="rn">Имя и фамилия</label><input class="input" id="rn" required minlength="2"></div>
   <div class="fld"><label for="rl">Логин</label><input class="input" id="rl" autocomplete="username" required minlength="3"></div>
   <div class="fld"><label for="rp">Пароль</label><input class="input" id="rp" type="password" autocomplete="new-password" required minlength="6"></div>
-  <div class="fld"><label for="rr">Роль</label><select class="select" id="rr"><option value="teacher">Учитель</option><option value="worker">Работник</option></select></div>
+  <div class="fld"><label for="invite-code">Персональный код от администратора</label><input class="input" id="invite-code" required minlength="16" autocomplete="off" placeholder="SCH-…"><p class="muted sm">Для регистрации учителя потребуется одноразовый код, выданный администрацией школы.</p></div>
   <button class="btn xl">Создать аккаунт</button><p class="muted"><a href="#/login" class="lnk">Вернуться ко входу</a></p></form></div></div>`, { auth: false });
 async function doLogin(login, password) {
   try { const d = await api('/api/login', { method: 'POST', body: { login: login.trim(), password } }); enter(d.token, d.user); toast('Добро пожаловать, ' + d.user.name.split(' ')[0]); }
@@ -44,7 +44,7 @@ ACT.togglePass = el => { const p=$('#'+el.dataset.target); p.type=p.type==='pass
 FORM.login = () => doLogin($('#lg').value, $('#pw').value);
 ACT.demoLogin = el => doLogin(el.dataset.v, '1234');
 FORM.register = async () => {
-  try { const d = await api('/api/register', { method: 'POST', body: { name: $('#rn').value.trim(), login: $('#rl').value.trim(), password: $('#rp').value, role: $('#rr').value } }); enter(d.token, d.user); toast('Аккаунт создан'); }
+  try { const d = await api('/api/register', { method: 'POST', body: { name: $('#rn').value.trim(), login: $('#rl').value.trim(), password: $('#rp').value, role: 'teacher', invite_code: $('#invite-code').value.trim() } }); enter(d.token, d.user); toast('Аккаунт создан'); }
   catch (e) { toast(e.message, 'err'); }
 };
 
@@ -56,6 +56,7 @@ route('/', async () => {
   const [reqs, rooms] = await Promise.all([api('/api/requests'), api('/api/rooms')]);
   if (S.user.role === 'teacher') return teacherHome(reqs, rooms);
   if (S.user.role === 'worker') return workerHome(reqs);
+  if (S.user.role === 'director') return directorHome();
   const u = S.user, teacher = u.role === 'teacher', act = reqs.filter(isActive);
   const over = act.filter(r => r.sla_state === 'overdue').length, crit = act.filter(r => r.priority === 'critical').length;
   const k = teacher ? [['Всего заявок', reqs.length], ['Активные', act.length], ['Подтверждено', reqs.filter(r => r.status === 'done' && r.confirmed_at).length], ['Ждут оценки', reqs.filter(r => r.status === 'done' && r.confirmed_at && !r.rating).length]]
@@ -72,6 +73,15 @@ route('/', async () => {
       <div class="legend"><span><i style="background:var(--surface-2)"></i>норма</span><span><i style="background:var(--med)"></i>средний</span><span><i style="background:var(--high)"></i>высокий</span><span><i style="background:var(--crit)"></i>критический</span></div></section></div>`
   };
 });
+
+async function directorHome() {
+  const d = await api('/api/dashboard/director'), s=d.stats;
+  return { title:'Панель директора',html:html`${head({title:'Состояние школы',sub:'Оперативная сводка по безопасности и ремонту помещений.',actions:html`<button class="btn alt" data-act="pdfDirector">${ic('dl')}Отчёт PDF</button>`})}
+  <div class="ledger director-ledger"><div><span>Всего обращений</span><b>${s.total}</b></div><div><span>В работе</span><b>${s.active}</b></div><div class="${s.urgent?'bad':'good'}"><span>Срочные</span><b>${s.urgent}</b></div><div><span>Ожидают назначения</span><b>${s.unassigned}</b></div></div>
+  <section class="panel critical-panel"><h2>Приоритетные обращения <span>${d.alerts.length}</span></h2><div class="rows">${d.alerts.length?d.alerts.map(r=>html`<a class="row" href="#/request/${r.id}"><b>Каб. ${r.room}</b><div><b>${r.description||'Требуется осмотр'}</b><p class="muted sm">Заявка №${r.id}</p></div>${prioTag(r.priority)}</a>`):empty('Срочных заявок нет','Обращения высокой и критической срочности появятся здесь.')}</div></section>
+  <div class="dashboard-shortcuts"><a class="btn alt" href="#/analytics">Подробная аналитика →</a><a class="btn alt" href="#/requests">Все заявки →</a><a class="btn alt" href="#/notifications">Уведомления →</a></div>`};
+}
+ACT.pdfDirector=()=>download('/api/export/director.pdf','schoolflow_director_report.pdf').catch(e=>toast(e.message,'err'));
 
 const firstName = () => S.user.name.split(' ')[0];
 const dateLine = () => new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -130,9 +140,9 @@ const rqFiltered = () => {
 function rqTable(rows) {
   const T = S.user.role === 'teacher';
   return rows.length ? html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>№</th><th>Каб.</th><th>Проблема</th><th>Статус</th>${T ? html`<th>Создана</th>` : html`<th>Приоритет</th><th>Срок</th><th>Исполнитель</th>`}<th></th></tr></thead><tbody>
-    ${rows.map(r => html`<tr><td class="mono muted"><a href="#/request/${r.id}" aria-label="Открыть заявку ${r.id}">#${r.id}</a></td><td>${plate(r.room)}</td><td><div class="desc">${r.description || r.detected_problem || 'Без описания'}</div><span class="tag">${CAT[r.category] || 'Другое'}</span></td>
+    ${rows.map(r => html`<tr><td class="mono muted"><a href="#/request/${r.id}" aria-label="Открыть заявку ${r.id}">#${r.id}</a></td><td>${plate(r.room)}</td><td><a class="desc request-open-title" href="#/request/${r.id}" title="Просмотреть заявку">${r.description || r.detected_problem || 'Без описания'}</a><span class="tag">${CAT[r.category] || 'Другое'}</span></td>
     <td>${T ? html`<span class="pill st-${r.status}">${FRIENDLY[r.status] || STATUS[r.status]}</span>` : statusPill(r.status)}</td>
-    ${T ? html`<td class="muted">${ago(r.created_at)}</td>` : html`<td>${prioTag(r.priority)}</td><td>${slaBadge(r) || html`<span class="muted">—</span>`}</td><td>${r.worker || html`<span class="muted">не назначен</span>`}</td>`}<td>${quick(r)}</td></tr>`)}</tbody></table></div>`
+    ${T ? html`<td class="muted">${ago(r.created_at)}</td>` : html`<td>${prioTag(r.priority)}</td><td>${slaBadge(r) || html`<span class="muted">—</span>`}</td><td>${r.worker || html`<span class="muted">не назначен</span>`}</td>`}<td><div class="request-actions"><a class="btn sm alt" href="#/request/${r.id}">Открыть</a>${quick(r)}</div></td></tr>`)}</tbody></table></div>`
     : empty('Ничего не найдено', 'Измените фильтры или поисковый запрос.');
 }
 function rqBoard(rows) {
@@ -211,14 +221,17 @@ function aiPanel(r) {
   if (r.ai_status === 'error') return html`<section class="ai-pro"><b>ИИ временно недоступен</b><p class="muted">Заявка сохранена; диагноз можно запросить повторно.</p><button class="btn alt" data-act="retryAI" data-id="${r.id}">Повторить ИИ-анализ</button></section>`;
   if (r.ai_status !== 'ok') return '';
   const L = (title, value, icon) => { const a=aiList(value); return a.length ? html`<section class="ai-group"><h4>${icon} ${title}</h4><ul>${a.map(x=>html`<li>${x}</li>`)}</ul></section>` : ''; };
-  return html`<section class="ai-pro" aria-label="Предварительный анализ искусственного интеллекта">
+  return html`<section class="ai-pro ai-enhanced" aria-label="Предварительный анализ искусственного интеллекта">
     <div class="ai-pro-head"><span class="ai-logo" aria-hidden="true">✦</span><div><b>ШКОЛА+ AI</b><small>Предварительная визуальная диагностика</small></div><span class="ai-ready">Анализ завершён</span></div>
     <p class="ai-kicker">ВОЗМОЖНАЯ НЕИСПРАВНОСТЬ</p><h3 class="ai-diagnosis">${r.detected_problem || 'Требуется осмотр'}</h3>
     <div class="chips ai-chips">${r.ai_category && html`<span class="tag">${CAT[r.ai_category] || 'Другое'}</span>`}${r.ai_priority && html`<span class="tag">Приоритет ИИ: ${PRIO[r.ai_priority]}</span>`}${r.ai_estimated_minutes ? html`<span class="tag">≈ ${r.ai_estimated_minutes} мин</span>` : ''}${r.ai_specialist_required && html`<span class="tag">Специалист: ${r.ai_specialist_required}</span>`}</div>
     ${r.ai_priority && r.ai_priority !== r.priority ? html`<p class="ai-warning">Внимание: оценка срочности ИИ отличается от выбранного приоритета. Проверьте вручную.</p>` : ''}
+    ${r.ai_danger_level ? html`<div class="ai-danger ai-danger-${r.ai_danger_level}" role="alert"><strong>${({low:'Низкая',medium:'Средняя',high:'Высокая',critical:'КРИТИЧЕСКАЯ'})[r.ai_danger_level] || 'Неизвестная'} степень опасности</strong><p>${r.ai_human_review ? 'Требуется срочная проверка ответственным человеком. Администрации отправлено уведомление внутри системы.' : 'Предварительная оценка по фотографии — не гарантия безопасности.'}</p></div>` : ''}
+    ${(S.user.role === 'teacher' || S.user.role === 'admin' || S.user.role === 'director') ? html`<div class="ai-role-teacher">${L('Что сделать учителю прямо сейчас',r.ai_teacher_actions,'☝')}</div>` : ''}
+    ${(S.user.role === 'worker' || S.user.role === 'admin' || S.user.role === 'director') ? html`<p class="ai-worker-notice">Подготовка работника: инструменты и материалы предварительные. Проверьте необходимость и безопасность работ на месте.</p>` : ''}
     ${L('Важные предупреждения',r.ai_safety,'⚠')}
-    <div class="ai-pair">${L('Инструменты',r.ai_tools,'⚒')}${L('Материалы',r.ai_materials,'▤')}</div>
-    ${L('Что проверить',r.ai_checks,'✓')}${L('Рекомендуемые действия',r.ai_actions,'→')}
+    ${(S.user.role !== 'teacher') ? html`<div class="ai-pair ai-worker-kit">${L('Инструменты — взять с собой',r.ai_tools,'⚒')}${L('Материалы — уточнить по месту',r.ai_materials,'▤')}</div>` : ''}
+    ${S.user.role !== 'teacher' ? html`${L('Что проверить работнику',r.ai_checks,'✓')}${L('Предварительные действия работника',r.ai_actions,'→')}` : ''}
     ${r.ai_answer ? html`<p class="ai-ok">Диагноз обновлён с учётом ответа: ${r.ai_answer}</p>` : ''}${r.ai_question ? html`<section class="ai-question"><h4>✦ Уточнение от ИИ</h4><p>${r.ai_question}</p>${r.ai_answer ? html`<div class="ai-answered"><b>Ответ:</b> ${r.ai_answer}</div>` : html`<form data-form="aiClarify" data-id="${r.id}"><label for="ai-answer-${r.id}" class="sr">Ответ на уточняющий вопрос</label><textarea class="input" id="ai-answer-${r.id}" rows="2" maxlength="500" required minlength="2" placeholder="Уточните, что происходит…"></textarea><button class="btn alt" type="submit">Уточнить диагноз с ИИ</button></form>`}</section>` : ''}
     <p class="ai-disclaimer">ИИ анализирует видимые признаки, не проводит техническую проверку. Уверенность модели не гарантирует правильность диагноза. Решение принимает специалист.</p>
   </section>`;
@@ -362,7 +375,7 @@ route('/analytics', async () => {
   const pc = { critical: 'var(--crit)', high: 'var(--high)', medium: 'var(--med)', low: 'var(--low)' }, totalP = Math.max(1, a.by_priority.reduce((s, x) => s + x.count, 0));
   const exp = ['admin', 'director'].includes(S.user.role);
   return {
-    title: 'Аналитика', html: html`${head({ title: 'Аналитика', sub: 'Сроки реакции и ремонта, категории и нагрузка исполнителей.', actions: exp && html`<button class="btn alt" data-act="csv">${ic('dl')}Выгрузить CSV</button>` })}
+    title: 'Аналитика', html: html`${head({ title: 'Аналитика', sub: 'Сроки реакции и ремонта, категории и нагрузка исполнителей.', actions: exp && html`<button class="btn alt" data-act="csv">${ic('dl')}Выгрузить CSV</button><button class="btn alt" data-act="pdfDirector">Отчёт PDF</button>` })}
     <section class="ai-pro repeat-pro"><div class="ai-pro-head"><span class="ai-logo">↻</span><div><b>Повторяющиеся неисправности</b><small>Автоматический поиск по истории заявок за ${repeats.days} дней</small></div></div>
       ${repeats.items.length ? html`<div class="repeat-items">${repeats.items.map(x=>html`<div class="repeat-item"><div><b>Кабинет ${x.room} · ${x.label}</b><p class="muted sm">${x.floor} этаж · последнее обращение ${fmtDate(x.latest)} · ${x.active} активных</p></div><b class="repeat-count">${x.count} ×</b></div>`)}</div><p class="sm muted">Рекомендуется комплексная проверка специалистом.</p>` : empty('Повторений не обнаружено','Когда появятся две заявки одной категории в одном кабинете, здесь будет предупреждение.')}
       <p class="ai-disclaimer">${repeats.method}</p></section>
@@ -380,28 +393,29 @@ ACT.csv = () => download('/api/export/requests.csv', 'school_plus_requests.csv')
 
 /* ================= управление ================= */
 route('/admin', async () => {
-  const [users, workers] = await Promise.all([api('/api/admin/users'), api('/api/admin/workers')]), maxA = Math.max(1, ...workers.map(w => w.active));
+  const [users, workers, invites] = await Promise.all([api('/api/admin/users'), api('/api/admin/workers'), api('/api/admin/teacher-invites')]), maxA = Math.max(1, ...workers.map(w => w.active));
   return {
-    title: 'Управление', html: html`${head({ title: 'Управление', sub: 'Роли пользователей, нагрузка исполнителей и демо-данные.' })}
+    title: 'Управление', html: html`${head({ title: 'Управление', sub: 'Доступ сотрудников, приглашения, нагрузка и контроль работы.' })}
     <div class="grid2" style="grid-template-columns:1.2fr 1fr"><section class="panel"><h2>Пользователи</h2><div class="rows">${users.map(x => html`<div class="row" style="grid-template-columns:1fr auto"><div><div class="t">${x.name}</div><div class="m"><span class="mono">${x.login}</span></div></div>
       <select class="select" data-change="role" data-id="${x.id}" aria-label="Роль ${x.name}">${Object.entries(ROLE).map(([k, v]) => html`<option value="${k}" ${k === x.role ? 'selected' : ''}>${v}</option>`)}</select></div>`)}</div></section>
-    <div class="stack"><section class="panel"><h2>Нагрузка исполнителей</h2><div class="hbar">${workers.length ? workers.map(w => html`<div><span>${w.name.split(' ')[0]}</span><div class="bar"><i style="width:${w.active / maxA * 100}%"></i></div><b>${w.active}</b></div>`) : empty('Нет работников', '')}</div></section>
+    <div class="stack"><section class="panel invite-panel"><h2>Доступ учителей</h2><p class="muted sm">Регистрация доступна только по персональному одноразовому коду. Срок действия — 7 дней.</p><button class="btn" data-act="generateTeacherInvite">Создать код учителю</button><div class="invite-result" id="invite-result" role="status" aria-live="polite"></div><p class="muted sm">Выдано: ${invites.length} · использовано: ${invites.filter(i => i.used_at).length}. Код виден только при создании.</p></section><section class="panel"><h2>Нагрузка исполнителей</h2><div class="hbar">${workers.length ? workers.map(w => html`<div><span>${w.name.split(' ')[0]}</span><div class="bar"><i style="width:${w.active / maxA * 100}%"></i></div><b>${w.active}</b></div>`) : empty('Нет работников', '')}</div></section>
       <section class="panel"><h2>Демо-данные</h2><div class="pb" style="display:grid;gap:12px"><p class="sm muted">Добавляет 16 тестовых заявок разных статусов, чтобы показать аналитику и карту на защите. Их можно удалить в один клик.</p><div style="display:flex;gap:8px"><button class="btn" data-act="seed">Добавить</button><button class="btn warn" data-act="unseed">Удалить демо-данные</button></div></div></section></div></div>`
   };
 }, { roles: ['admin'] });
+ACT.generateTeacherInvite = async () => {
+  try {
+    const r = await api('/api/admin/teacher-invites',{method:'POST'});
+    const out = $('#invite-result');
+    if (out) out.innerHTML = str(html`<div class="invite-code"><b>${r.code}</b><button class="btn sm alt" data-act="copyTeacherInvite" data-code="${r.code}">Копировать</button></div><p class="muted sm">Действует до ${r.expires_at}. Передайте код только нужному учителю.</p>`);
+    toast('Приглашение создано');
+  } catch(e) {toast(e.message,'err');}
+};
+ACT.copyTeacherInvite = async el => {try { await navigator.clipboard.writeText(el.dataset.code); toast('Код скопирован'); }catch {toast('Выделите и скопируйте код вручную','err');}};
 ACT.role = async el => { try { await api(`/api/admin/users/${el.dataset.id}?role=${encodeURIComponent(el.value)}`, { method: 'PATCH' }); toast('Роль обновлена'); } catch (e) { toast(e.message, 'err'); navigate(); } };
 ACT.seed = () => mutate(async () => { const d = await api('/api/admin/demo-seed', { method: 'POST' }); toast(`Добавлено заявок: ${d.added}`); });
 ACT.unseed = () => confirm('Удалить все демо-заявки?') && mutate(async () => { const d = await api('/api/admin/demo-seed', { method: 'DELETE' }); toast(`Удалено: ${d.removed}`); });
 
 /* ================= эксплуатация школы V8 ================= */
-route('/inventory', async()=>{
-  const items=await api('/api/inventory'),manager=['admin','director'].includes(S.user.role);
-  return {title:'Материалы',html:html`${head({title:'Склад материалов',sub:'Фактические остатки и минимальные запасы.'})}
-    ${manager&&html`<section class="panel"><h2>Добавить материал</h2><form class="pb form-flex" data-form="stockAdd"><label>Название<input class="input" id="stock-name" required minlength="2" maxlength="120"></label><label>Количество<input class="input" id="stock-qty" type="number" min="0" step="0.01" value="1" required></label><label>Ед. измерения<input class="input" id="stock-unit" value="шт" maxlength="20"></label><label>Минимум<input class="input" id="stock-min" type="number" min="0" value="1" step="0.01"></label><button class="btn">Добавить</button></form></section>`}
-    <section class="panel"><h2>Остатки</h2><div class="rows">${items.length?items.map(x=>html`<div class="row stock-row"><b>${x.name}</b><span class="${x.quantity<=x.min_quantity?'bad':''}">${x.quantity} ${x.unit} · минимум ${x.min_quantity}</span>${manager&&html`<button class="btn alt sm" data-act="stockChange" data-id="${x.id}" data-name="${x.name}">Изменить</button>`}</div>`):empty('Пока нет материалов','Добавьте первый материал.')}</div></section>`};
-},{roles:['worker','admin','director']});
-FORM.stockAdd=()=>mutate(()=>api('/api/admin/inventory',{method:'POST',body:{name:$('#stock-name').value,quantity:+$('#stock-qty').value,unit:$('#stock-unit').value,min_quantity:+$('#stock-min').value}}),'Материал добавлен');
-ACT.stockChange=el=>{const value=prompt(`Изменение остатка «${el.dataset.name}». Введите число: +5 (приход) или -2 (расход)`);if(value===null)return;const delta=Number(value);if(!Number.isFinite(delta))return toast('Нужно число','err');mutate(()=>api(`/api/admin/inventory/${el.dataset.id}`,{method:'PATCH',body:{delta}}),'Остаток изменён');};
 route('/maintenance',async()=>{
   const [items,rooms]=await Promise.all([api('/api/maintenance'),api('/api/rooms')]);const manager=['admin','director'].includes(S.user.role);
   return {title:'Обслуживание',html:html`${head({title:'Плановые осмотры',sub:'Профилактика и контроль выполнения работ.'})}
@@ -430,7 +444,7 @@ route('/notifications', async () => {
   const n = await api('/api/notifications');
   return {
     title: 'Уведомления', html: html`${head({ title: 'Уведомления', sub: 'Изменения заявок, комментарии и предупреждения по срокам.', actions: n.some(x => !x.read) && html`<button class="btn alt" data-act="readAll">${ic('check')}Прочитать все</button>` })}
-    <section class="panel"><div class="rows">${n.length ? n.map(x => html`<a class="row" style="grid-template-columns:10px 1fr auto" href="${x.request_id ? '#/request/' + x.request_id : '#/notifications'}"><i style="width:8px;height:8px;border-radius:50%;background:${x.read ? 'transparent' : 'var(--chalk)'}"></i><div><div class="t">${x.title}</div><div class="m">${x.body}</div></div><span class="muted sm">${ago(x.created_at)}</span></a>`) : empty('Уведомлений нет', 'Здесь появятся новые события.')}</div></section>`
+    <section class="panel"><div class="rows notification-list">${n.length ? n.map(x => html`<a class="row ${!x.read ? 'notice-new' : ''} ${/опас|критич|обруш|сроч/i.test(x.title+' '+x.body) ? 'notice-urgent' : ''}" style="grid-template-columns:10px 1fr auto" href="${x.request_id ? '#/request/' + x.request_id : '#/notifications'}"><i style="width:8px;height:8px;border-radius:50%;background:${x.read ? 'transparent' : 'var(--chalk)'}"></i><div><div class="t">${x.title}</div><div class="m">${x.body}</div></div><span class="muted sm">${ago(x.created_at)}</span></a>`) : empty('Уведомлений нет', 'Здесь появятся новые события.')}</div></section>`
   };
 });
 ACT.readAll = () => mutate(() => api('/api/notifications/read', { method: 'PATCH' }));

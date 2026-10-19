@@ -1,0 +1,23 @@
+# Secrets and persistent data (do not publish user accounts or private photos)
+.env
+.env.*
+!.env.example
+.secret
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+uploads/
+backups/
+data/
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

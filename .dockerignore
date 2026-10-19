@@ -1,0 +1,10 @@
+**/.env
+**/.secret
+**/__pycache__
+**/*.db
+**/*.db-*
+**/uploads
+**/backups
+**/.venv
+.git
+*.zip

@@ -171,7 +171,7 @@ function navItems() {
   const r = S.user.role;
   const home = { teacher: 'Главная', worker: 'Мои задачи' }[r] || 'Обзор';
   return [['/', 'home', home], ['/requests', 'list', r === 'teacher' ? 'Мои заявки' : 'Заявки'], ['/plan', 'map', 'План школы'], ['/passports', 'map', 'Паспорта кабинетов'],
-    ...(['admin', 'director', 'worker'].includes(r) ? [['/inventory', 'list', 'Склад'], ['/maintenance', 'check', 'Плановые осмотры']] : []),
+    ...(['admin', 'director', 'worker'].includes(r) ? [['/maintenance', 'check', 'Плановые осмотры']] : []),
     ...(['admin', 'director'].includes(r) ? [['/ai-usage', 'chart', 'Статистика ИИ']] : []),
     ...(['admin', 'director', 'worker'].includes(r) ? [['/analytics', 'chart', 'Аналитика']] : []),
     ...(r === 'admin' ? [['/admin', 'shield', 'Управление']] : []), ['/demo', 'play', 'Сценарий показа']];

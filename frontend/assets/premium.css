@@ -46,3 +46,26 @@ html{scroll-padding-top:88px}body{font:15.5px/1.55 var(--font);letter-spacing:-.
 @media(prefers-reduced-motion:reduce){.btn,.cta,.row{transition:none}}
 
 .grid2>* ,.grid-d>* ,.ledger>* ,.row>* ,.task>*{min-width:0}
+
+/* SchoolFlow safety AI, mobile-first */
+.ai-danger{border:1px solid var(--border,#666);border-radius:14px;padding:14px 16px;margin:16px 0;background:rgba(128,128,128,.08)}
+.ai-danger strong{display:block;font-size:1.08rem}.ai-danger p{margin:7px 0 0;line-height:1.5}
+.ai-danger-low{border-color:#3a9163}.ai-danger-medium{border-color:#cfa443}.ai-danger-high{border-color:#f08445;background:rgba(234,112,42,.10)}
+.ai-danger-critical{border:2px solid #e35261;background:rgba(227,82,97,.14)}
+.ai-worker-notice{font-size:.9rem;line-height:1.5;opacity:.9}
+@media(max-width:600px){.ai-danger{padding:12px}.ai-pair{display:block}.ai-pro .ai-group{min-width:0;overflow-wrap:anywhere}}
+
+/* Final defense polish: readable actions and administration */
+.request-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center;justify-content:flex-end}.request-actions .btn{white-space:nowrap}
+.request-open-title{display:block;color:var(--ink);text-decoration:none;font-weight:720;line-height:1.42}.request-open-title:hover{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.invite-panel{background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 7%,var(--surface)),var(--surface))}.invite-panel>p{margin:9px 0 16px}.invite-result:not(:empty){margin-top:16px;border:1px solid var(--line-2);border-radius:14px;padding:14px;background:var(--bg)}
+.invite-code{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}.invite-code b{overflow-wrap:anywhere;font-size:clamp(16px,2vw,22px);letter-spacing:.045em;color:var(--accent)}
+.more-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:18px}.more-list a{display:flex;align-items:center;gap:11px;min-height:56px;padding:14px;border:1px solid var(--line);border-radius:14px;text-decoration:none;color:var(--ink);background:var(--surface);font-weight:650}.more-list a:hover{border-color:var(--accent);background:var(--hover)}.more-list a .ic{color:var(--accent)}
+@media(max-width:760px){.more-list{grid-template-columns:1fr;padding:12px}.request-actions{justify-content:flex-start}.request-actions .btn{min-height:42px}.tbl td:last-child{min-width:190px}.invite-code{align-items:stretch}.invite-code button{width:100%}}
+
+/* SchoolFlow final: role dashboards, notifications, responsive AI */
+.director-ledger{margin-bottom:20px}.critical-panel{border-top:3px solid var(--crit)}.dashboard-shortcuts{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
+.notification-list .row{transition:background .2s,border-color .2s}.notification-list .notice-new{background:rgba(190,225,105,.07);border-left:3px solid var(--accent)}.notification-list .notice-urgent{border-left:4px solid var(--crit);background:rgba(228,69,69,.10)}.notification-list .row>div{min-width:0;overflow-wrap:anywhere}
+.ai-enhanced .ai-role-teacher{padding:14px 16px;border:1px solid rgba(145,196,99,.32);border-radius:14px;background:rgba(145,196,99,.07)}.ai-enhanced .ai-worker-kit{padding:12px;border:1px solid var(--stroke,var(--line));border-radius:14px}.ai-enhanced .ai-danger{margin:14px 0}.ai-enhanced .ai-group li{line-height:1.55}.ai-enhanced .ai-pair{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:760px){.dashboard-shortcuts{flex-direction:column}.dashboard-shortcuts .btn{width:100%;justify-content:center}.director-ledger{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-enhanced .ai-pair{display:grid;grid-template-columns:minmax(0,1fr)}.notification-list .row{grid-template-columns:10px minmax(0,1fr)!important;gap:10px}.notification-list .row>.muted:last-child{grid-column:2}.tbl-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.toolbar{flex-wrap:wrap}.toolbar>.input{max-width:100%;width:100%!important}.auth,.grid2{grid-template-columns:minmax(0,1fr)!important}.ai-pro,.panel{min-width:0}}
+@media(max-width:375px){.director-ledger{grid-template-columns:minmax(0,1fr)}.ai-enhanced{padding:12px}.row{overflow-wrap:anywhere}}

@@ -213,12 +213,21 @@ def init():
     for col, typ, default in [("session_version","INTEGER","0")]:
         try: c.execute(f"ALTER TABLE users ADD COLUMN {col} {typ} DEFAULT {default}")
         except sqlite3.OperationalError: pass
-    for col, typ, default in [("priority","TEXT","'medium'"),("after_image","TEXT","NULL"),("resolution","TEXT","NULL"),("materials","TEXT","NULL"),("rating","INTEGER","NULL"),("rating_comment","TEXT","NULL"),("category","TEXT","NULL"),("accepted_at","TEXT","NULL"),("started_at","TEXT","NULL"),("assigned_at","TEXT","NULL"),("repair_complexity","TEXT","NULL"),("estimated_minutes","INTEGER","NULL"),("ai_complexity","TEXT","NULL"),("ai_estimated_minutes","INTEGER","NULL"),("ai_specialist_required","TEXT","NULL"),("ai_category","TEXT","NULL"),("ai_priority","TEXT","NULL"),("ai_confidence","REAL","NULL"),("ai_tools","TEXT","NULL"),("ai_materials","TEXT","NULL"),("ai_checks","TEXT","NULL"),("ai_actions","TEXT","NULL"),("ai_safety","TEXT","NULL"),("ai_status","TEXT","NULL"),("ai_error","TEXT","NULL"),("ai_question","TEXT","NULL"),("ai_answer","TEXT","NULL"),("confirmed_at","TEXT","NULL"),("confirmed_by","INTEGER","NULL")]:
+    for col, typ, default in [("priority","TEXT","'medium'"),("after_image","TEXT","NULL"),("resolution","TEXT","NULL"),("materials","TEXT","NULL"),("rating","INTEGER","NULL"),("rating_comment","TEXT","NULL"),("category","TEXT","NULL"),("accepted_at","TEXT","NULL"),("started_at","TEXT","NULL"),("assigned_at","TEXT","NULL"),("repair_complexity","TEXT","NULL"),("estimated_minutes","INTEGER","NULL"),("ai_complexity","TEXT","NULL"),("ai_estimated_minutes","INTEGER","NULL"),("ai_specialist_required","TEXT","NULL"),("ai_category","TEXT","NULL"),("ai_priority","TEXT","NULL"),("ai_confidence","REAL","NULL"),("ai_tools","TEXT","NULL"),("ai_materials","TEXT","NULL"),("ai_checks","TEXT","NULL"),("ai_actions","TEXT","NULL"),("ai_safety","TEXT","NULL"),("ai_teacher_actions","TEXT","NULL"),("ai_danger_level","TEXT","NULL"),("ai_room_access","TEXT","NULL"),("ai_human_review","INTEGER","0"),("ai_status","TEXT","NULL"),("ai_error","TEXT","NULL"),("ai_question","TEXT","NULL"),("ai_answer","TEXT","NULL"),("confirmed_at","TEXT","NULL"),("confirmed_by","INTEGER","NULL")]:
         try: c.execute(f"ALTER TABLE requests ADD COLUMN {col} {typ} DEFAULT {default}")
         except sqlite3.OperationalError: pass
     for idx in ("requests(user_id)", "requests(worker_id)", "requests(room_id)", "requests(status)",
                 "notifications(user_id)", "audit_log(request_id)", "comments(request_id)"):
         c.execute(f"CREATE INDEX IF NOT EXISTS idx_{idx.replace('(', '_').replace(')', '')} ON {idx}")
+    c.execute("""CREATE TABLE IF NOT EXISTS teacher_invites(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token_hash TEXT NOT NULL UNIQUE,
+      created_by INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      used_by INTEGER
+    )""")
     c.commit(); c.close()
 
 
@@ -257,6 +266,7 @@ class Register(BaseModel):
     login: str
     password: str
     role: str = "teacher"
+    invite_code: str = ""
 
 
 class Status(BaseModel):
@@ -284,11 +294,24 @@ def register(x: Register):
         raise HTTPException(403, "Регистрация работников отключена. Обратитесь к администратору")
     c = db()
     try:
+        # Invite validation and redemption must be in one write transaction.
+        c.execute("BEGIN IMMEDIATE")
+        if x.role == "teacher" and not DEMO_MODE:
+            code = x.invite_code.strip().upper()
+            if len(code) < 16:
+                raise HTTPException(403, "Нужен персональный код приглашения от администратора")
+            token_hash = hashlib.sha256(code.encode()).hexdigest()
+            invite = c.execute("SELECT id FROM teacher_invites WHERE token_hash=? AND used_at IS NULL AND expires_at>?", (token_hash, now_iso())).fetchone()
+            if not invite:
+                raise HTTPException(403, "Код неверный, просрочен или уже использован")
         cur = c.execute("INSERT INTO users(name,login,password_hash,role) VALUES(?,?,?,?)", (name, login, hash_password(password), x.role))
+        if x.role == "teacher" and not DEMO_MODE:
+            c.execute("UPDATE teacher_invites SET used_at=?,used_by=? WHERE id=? AND used_at IS NULL", (now_iso(),cur.lastrowid,invite['id']))
         c.commit()
         u = {"id": cur.lastrowid, "name": name, "login": login, "role": x.role}
         return {"token": token_for(u), "user": u}
     except sqlite3.IntegrityError:
+        c.rollback()
         raise HTTPException(409, "Такой логин уже существует")
     finally:
         c.close()
@@ -469,7 +492,43 @@ def ai_string_list(value, limit=12):
     if not isinstance(value, list): return []
     return [str(x).strip()[:180] for x in value[:limit] if isinstance(x, (str, int, float)) and str(x).strip()]
 
-def _normalize_ai(data_obj):
+DANGER_ORDER = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+DANGER_LABELS = {"low":"Низкая", "medium":"Средняя", "high":"Высокая", "critical":"Критическая"}
+# Conservative matching of explicitly described hazards, never a definitive photo diagnosis.
+HAZARD_TERMS = {
+    "critical": ("обрушени", "обвал потол", "потолок упал", "пожар", "задымлен", "сильный дым", "утечка газа", "запах газа"),
+    "high": ("искрит", "искрение", "оголенный провод", "оголённый провод", "провис потол", "трещина в потол", "обваливается потол", "электрощит"),
+}
+
+def safety_guidance(data_obj, description=""):
+    """Ensure model output cannot downgrade obvious described hazards."""
+    severity = str(data_obj.get('danger_level') or data_obj.get('priority') or 'medium').lower()
+    if severity not in DANGER_ORDER: severity='medium'
+    sample = ' '.join(str(data_obj.get(k) or '') for k in ('problem',)) + ' ' + (description or '')
+    sample = sample.lower()[:3000]
+    for level in ('critical','high'):
+        if any(term in sample for term in HAZARD_TERMS[level]) and DANGER_ORDER[level]>DANGER_ORDER[severity]:
+            severity=level
+    teacher = ai_string_list(data_obj.get('teacher_actions'), 7)
+    if severity == 'critical':
+        teacher = ["Немедленно выведите людей из опасного помещения и прилегающей опасной зоны.",
+                   "Не входите обратно, не пытайтесь устранить повреждение и немедленно сообщите администрации.",
+                   "При угрозе жизни, пожаре или обрушении вызовите экстренные службы согласно школьному плану действий."] + teacher[:2]
+        access='leave'
+    elif severity == 'high':
+        teacher = ["Выведите людей из опасной части помещения; при угрозе для всего кабинета покиньте кабинет.",
+                   "Не трогайте повреждённые конструкции и электроприборы; срочно сообщите администрации."] + teacher[:2]
+        access='restrict'
+    elif severity == 'medium':
+        teacher = ["Не допускайте учеников к повреждённому месту и сообщите администрации."] + teacher[:3]
+        access='restrict'
+    else:
+        teacher = ["Не используйте повреждённый предмет, если это безопасно — уберите его из использования и ожидайте работника."] + teacher[:3]
+        access='avoid_item'
+    return severity, teacher, access, int(severity in ('high','critical'))
+
+
+def _normalize_ai(data_obj, description=""):
     if not isinstance(data_obj, dict): raise ValueError("Ответ ИИ должен быть объектом JSON")
     allowed_categories = {"electricity","furniture","tech","heating","plumbing","lighting","windows_doors","cleaning","other"}
     allowed_priority = {"low","medium","high","critical"}
@@ -483,6 +542,7 @@ def _normalize_ai(data_obj):
         "checks": ai_string_list(data_obj.get("checks"),12),
         "recommended_actions": ai_string_list(data_obj.get("recommended_actions"),12),
         "safety_notes": ai_string_list(data_obj.get("safety_notes"),8),
+        "teacher_actions": ai_string_list(data_obj.get("teacher_actions"),7),
         "complexity": str(data_obj.get("complexity") or "medium"),
         "estimated_minutes": safe_ai_minutes(data_obj.get("estimated_minutes")),
         "specialist_required": str(data_obj.get("specialist_required") or "Не обязательно")[:80],
@@ -497,6 +557,8 @@ def _normalize_ai(data_obj):
         result["category"] = "other"
     if result["complexity"] not in {"low","medium","high"}: result["complexity"]="medium"
     result["estimated_minutes"] = max(0, min(1440, result["estimated_minutes"]))
+    level, teacher_actions, room_access, review = safety_guidance(data_obj, description)
+    result.update(danger_level=level, teacher_actions=teacher_actions, room_access=room_access, requires_human_review=review)
     return result
 
 
@@ -505,7 +567,7 @@ def analyze_image(path, description=""):
         "problem": "",
         "category": None, "priority": None, "confidence": None,
         "tools": [], "materials": [], "checks": [],
-        "recommended_actions": [], "safety_notes": [], "question": "",
+        "recommended_actions": [], "safety_notes": [], "teacher_actions": [], "danger_level": None, "question": "",
         "ai_enabled": False, "ai_status": "unavailable",
         "ai_error": "AI-анализ не выполнен."
     }
@@ -543,6 +605,8 @@ windows_doors, а не общий "требуется осмотр", и указ
   "checks": ["..."],
   "recommended_actions": ["..."],
   "safety_notes": ["..."],
+  "teacher_actions": ["что учителю безопасно сделать сразу"],
+  "danger_level": "low|medium|high|critical",
   "complexity": "low|medium|high",
   "estimated_minutes": 30,
   "specialist_required": "Не обязательно|Желательно|Обязательно",
@@ -558,6 +622,11 @@ windows_doors, а не общий "требуется осмотр", и указ
   соответствующее предупреждение.
 - Оцени сложность ремонта и примерное время только ориентировочно.
 - Если нужен профильный специалист, укажи это явно.
+- Раздели немедленные безопасные действия учителя и профессиональную подготовку работника.
+- Учителю нельзя рекомендовать самостоятельно ремонтировать электрику или аварийные конструкции.
+- При явных признаках пожара, обрушения, газа или искрения не преуменьшай опасность.
+- Нельзя требовать эвакуацию всей школы только по фото: указать немедленный выход из опасной зоны и сообщение ответственным по плану школы.
+- Списки инструментов и материалов предварительные, уточняются после осмотра.
 - Это предварительная рекомендация, окончательное решение принимает работник после осмотра.
 """
 
@@ -579,7 +648,7 @@ windows_doors, а не общий "требуется осмотр", и указ
             text = _ai_text_from_response(payload)
             obj = _ai_json(text)
             if isinstance(obj, dict):
-                return _normalize_ai(obj)
+                return _normalize_ai(obj, description)
             errors.append("Responses API: ответ не содержит валидный JSON")
         except Exception as e:
             errors.append(f"Responses API: {str(e)[:350]}")
@@ -602,7 +671,7 @@ windows_doors, а не общий "требуется осмотр", и указ
             text = _ai_text_from_response(payload)
             obj = _ai_json(text)
             if isinstance(obj, dict):
-                return _normalize_ai(obj)
+                return _normalize_ai(obj, description)
             errors.append("Chat Completions: ответ не содержит валидный JSON")
         except Exception as e:
             errors.append(f"Chat Completions: {str(e)[:350]}")
@@ -627,9 +696,15 @@ def schedule_ai_analysis(rid, filename, description):
             status='error'
         c=db()
         try:
-            c.execute("""UPDATE requests SET detected_problem=?,tools=?,ai_category=?,ai_priority=?,ai_confidence=?,ai_tools=?,ai_materials=?,ai_checks=?,ai_actions=?,ai_safety=?,ai_complexity=?,ai_estimated_minutes=?,ai_specialist_required=?,ai_question=?,ai_status=?,ai_error=? WHERE id=?""",
-                (result.get('problem',''),'; '.join(result.get('tools',[])),result.get('category'),result.get('priority'),result.get('confidence'),json.dumps(result.get('tools',[]),ensure_ascii=False),json.dumps(result.get('materials',[]),ensure_ascii=False),json.dumps(result.get('checks',[]),ensure_ascii=False),json.dumps(result.get('recommended_actions',[]),ensure_ascii=False),json.dumps(result.get('safety_notes',[]),ensure_ascii=False),result.get('complexity'),result.get('estimated_minutes'),result.get('specialist_required'),result.get('question'),status,clean_ai_error(result.get('ai_error')),rid))
+            c.execute("""UPDATE requests SET detected_problem=?,tools=?,ai_category=?,ai_priority=?,ai_confidence=?,ai_tools=?,ai_materials=?,ai_checks=?,ai_actions=?,ai_safety=?,ai_complexity=?,ai_estimated_minutes=?,ai_specialist_required=?,ai_question=?,ai_status=?,ai_error=?,ai_teacher_actions=?,ai_danger_level=?,ai_room_access=?,ai_human_review=? WHERE id=?""",
+                (result.get('problem',''),'; '.join(result.get('tools',[])),result.get('category'),result.get('priority'),result.get('confidence'),json.dumps(result.get('tools',[]),ensure_ascii=False),json.dumps(result.get('materials',[]),ensure_ascii=False),json.dumps(result.get('checks',[]),ensure_ascii=False),json.dumps(result.get('recommended_actions',[]),ensure_ascii=False),json.dumps(result.get('safety_notes',[]),ensure_ascii=False),result.get('complexity'),result.get('estimated_minutes'),result.get('specialist_required'),result.get('question'),status,clean_ai_error(result.get('ai_error')),json.dumps(result.get('teacher_actions',[]),ensure_ascii=False),result.get('danger_level'),result.get('room_access'),result.get('requires_human_review',0),rid))
             c.execute('INSERT INTO ai_usage(request_id,model,created_at,status,latency_ms) VALUES(?,?,?,?,?)',(rid,AI_MODEL,now_iso(),status,int((time.monotonic()-started)*1000)))
+            if status == 'ok' and result.get('requires_human_review'):
+                room = c.execute('SELECT r.number FROM requests q JOIN rooms r ON r.id=q.room_id WHERE q.id=?',(rid,)).fetchone()
+                title = 'СРОЧНО: потенциально опасная ситуация'
+                body = f"Заявка #{rid}, кабинет {room['number'] if room else '?'}: возможная {DANGER_LABELS[result['danger_level']].lower()} опасность. Проверьте ситуацию немедленно."
+                for recipient in c.execute("SELECT id FROM users WHERE role IN ('admin','director')").fetchall():
+                    add_notification(c, recipient['id'], rid, title, body)
             add_audit(c,rid,None,'ai_analysis', 'Анализ завершён: '+status)
             c.commit()
         finally: c.close()
@@ -816,7 +891,9 @@ def notifications(authorization: str | None = Header(None)):
     rows = c.execute("SELECT id,user_id,worker_id,created_at,priority,status FROM requests WHERE status NOT IN ('done','rejected')").fetchall()
     target_ids = {u['id']}
     for r in rows:
-        if u['role']=='worker' and r['worker_id']!=u['id'] and r['status']!='new':
+        if u['role']=='teacher' and r['user_id'] != u['id']:
+            continue
+        if u['role']=='worker' and r['worker_id']!=u['id']:
             continue
         due=sla_due(r['created_at'],r['priority'])
         if not due: continue
@@ -950,8 +1027,12 @@ def clarify_ai(rid:int, x:Clarification, authorization: str | None = Header(None
     fresh=c.execute('SELECT ai_answer FROM requests WHERE id=?',(rid,)).fetchone()
     if not fresh or fresh['ai_answer']:
         c.close(); raise HTTPException(409,'Уточнение уже обработано')
-    c.execute("""UPDATE requests SET ai_answer=?,detected_problem=?,tools=?,ai_category=?,ai_priority=?,ai_confidence=?,ai_tools=?,ai_materials=?,ai_checks=?,ai_actions=?,ai_safety=?,ai_complexity=?,ai_estimated_minutes=?,ai_specialist_required=?,ai_question=NULL,ai_status='ok',ai_error=NULL WHERE id=?""",
-        (answer,result['problem'],'; '.join(result['tools']),result['category'],result['priority'],result['confidence'],json.dumps(result['tools'],ensure_ascii=False),json.dumps(result['materials'],ensure_ascii=False),json.dumps(result['checks'],ensure_ascii=False),json.dumps(result['recommended_actions'],ensure_ascii=False),json.dumps(result['safety_notes'],ensure_ascii=False),result['complexity'],result['estimated_minutes'],result['specialist_required'],rid))
+    c.execute("""UPDATE requests SET ai_answer=?,detected_problem=?,tools=?,ai_category=?,ai_priority=?,ai_confidence=?,ai_tools=?,ai_materials=?,ai_checks=?,ai_actions=?,ai_safety=?,ai_complexity=?,ai_estimated_minutes=?,ai_specialist_required=?,ai_question=NULL,ai_status='ok',ai_error=NULL,ai_teacher_actions=?,ai_danger_level=?,ai_room_access=?,ai_human_review=? WHERE id=?""",
+        (answer,result['problem'],'; '.join(result['tools']),result['category'],result['priority'],result['confidence'],json.dumps(result['tools'],ensure_ascii=False),json.dumps(result['materials'],ensure_ascii=False),json.dumps(result['checks'],ensure_ascii=False),json.dumps(result['recommended_actions'],ensure_ascii=False),json.dumps(result['safety_notes'],ensure_ascii=False),result['complexity'],result['estimated_minutes'],result['specialist_required'],json.dumps(result.get('teacher_actions',[]),ensure_ascii=False),result.get('danger_level'),result.get('room_access'),result.get('requires_human_review',0),rid))
+    if result.get('requires_human_review'):
+        room = c.execute('SELECT r.number FROM requests q JOIN rooms r ON r.id=q.room_id WHERE q.id=?',(rid,)).fetchone()
+        for recipient in c.execute("SELECT id FROM users WHERE role IN ('admin','director')").fetchall():
+            add_notification(c,recipient['id'],rid,'СРОЧНО: уточнение опасной ситуации',f"Заявка #{rid}, кабинет {room['number'] if room else '?'}: требуется немедленная проверка.")
     add_audit(c,rid,u['id'],'ai_clarified','ИИ повторно проанализировал уточнение',now_iso())
     c.commit();c.close()
     return {'ok':True,'message':'Диагноз обновлён после повторного анализа ИИ.','problem':result['problem']}
@@ -972,6 +1053,21 @@ def repeat_issues(authorization: str | None = Header(None), days:int=90):
         row['label']=CATEGORY_LABELS.get(row['category'] or 'other','Другое')
         row['recommendation']='Рекомендуется комплексная проверка повторяющейся неисправности специалистом.'
     return {'days':days,'items':rows,'method':'Правило: 2+ заявок одной категории в одном кабинете за период. Не прогноз ИИ.'}
+
+@app.get('/api/dashboard/director')
+def director_dashboard(authorization: str | None = Header(None)):
+    u=current_user(authorization)
+    if u['role'] not in ('director','admin'): raise HTTPException(403,'Недостаточно прав')
+    c=db()
+    stats={
+      'total':c.execute('SELECT COUNT(*) FROM requests').fetchone()[0],
+      'active':c.execute("SELECT COUNT(*) FROM requests WHERE status NOT IN ('done','rejected','cancelled')").fetchone()[0],
+      'unassigned':c.execute("SELECT COUNT(*) FROM requests WHERE worker_id IS NULL AND status NOT IN ('done','rejected','cancelled')").fetchone()[0],
+      'urgent':c.execute("SELECT COUNT(*) FROM requests WHERE priority IN ('high','critical') AND status NOT IN ('done','rejected','cancelled')").fetchone()[0],
+      'awaiting_confirmation':c.execute("SELECT COUNT(*) FROM requests WHERE status='done' AND confirmed_at IS NULL").fetchone()[0],
+    }
+    alerts=[dict(r) for r in c.execute("SELECT q.id,q.description,q.priority,q.status,r.number room FROM requests q JOIN rooms r ON r.id=q.room_id WHERE q.priority IN ('high','critical') AND q.status NOT IN ('done','rejected','cancelled') ORDER BY CASE q.priority WHEN 'critical' THEN 0 ELSE 1 END,q.created_at DESC LIMIT 8").fetchall()]
+    c.close(); return {'stats':stats,'alerts':alerts}
 
 @app.get('/api/analytics')
 def analytics(authorization: str | None = Header(None)):
@@ -1002,6 +1098,29 @@ def analytics(authorization: str | None = Header(None)):
     bypriority=[dict(x) for x in c.execute('SELECT priority,COUNT(*) count FROM requests GROUP BY priority').fetchall()]
     c.close()
     return {'total':total,'done':done,'pending_confirmation':pending_confirm,'rework_attempts':reworks,'completion_rate':round(done/total*100,1) if total else 0,'avg_response_minutes':round(avg_response or 0,1),'avg_repair_minutes':round(avg_repair or 0,1),'avg_total_minutes':round(avg_total or 0,1),'avg_minutes':round(avg_total or 0,1),'avg_rating':round(ratings['a'],2) if ratings['a'] is not None else None,'ratings_count':ratings['n'],'overdue':overdue,'sla_compliance':round(sla_ok/sla_total*100,1) if sla_total else None,'by_floor':byfloor,'by_category':bycategory,'by_room':byroom,'by_worker':byworker,'by_priority':bypriority}
+
+@app.post('/api/admin/teacher-invites')
+def new_teacher_invite(authorization: str | None = Header(None)):
+    u = current_user(authorization)
+    if u['role'] != 'admin': raise HTTPException(403, 'Только администратор')
+    code = 'SCH-' + secrets.token_hex(12).upper()
+    expires = (datetime.now() + timedelta(days=7)).isoformat(timespec='seconds')
+    c = db()
+    try:
+        c.execute('INSERT INTO teacher_invites(token_hash,created_by,created_at,expires_at) VALUES(?,?,?,?)',
+                  (hashlib.sha256(code.encode()).hexdigest(),u['id'],now_iso(),expires))
+        c.commit()
+    finally: c.close()
+    return {'code':code,'expires_at':expires,'note':'Код показывается только один раз. Сохраните его для учителя.'}
+
+@app.get('/api/admin/teacher-invites')
+def list_teacher_invites(authorization: str | None = Header(None)):
+    u = current_user(authorization)
+    if u['role'] != 'admin': raise HTTPException(403, 'Только администратор')
+    c = db()
+    rows = [dict(r) for r in c.execute('SELECT id,created_at,expires_at,used_at,used_by FROM teacher_invites ORDER BY id DESC LIMIT 100')]
+    c.close()
+    return rows
 
 @app.get('/api/admin/users')
 def admin_users(authorization: str | None = Header(None)):
@@ -1132,6 +1251,39 @@ def _csv_cell(v):
     v = "" if v is None else str(v)
     return "'" + v if v[:1] in ("=", "+", "-", "@") else v
 
+
+@app.get('/api/export/director.pdf')
+def export_director_pdf(authorization: str | None = Header(None)):
+    u=current_user(authorization)
+    if u['role'] not in ('admin','director'): raise HTTPException(403,'Недостаточно прав')
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from io import BytesIO
+    from xml.sax.saxutils import escape
+    fontpath=Path('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')
+    if not fontpath.exists(): raise HTTPException(503,'Шрифт для PDF не установлен')
+    if 'SchoolFlowCyr' not in pdfmetrics.getRegisteredFontNames(): pdfmetrics.registerFont(TTFont('SchoolFlowCyr',str(fontpath)))
+    c=db()
+    totals=c.execute("SELECT COUNT(*) total, SUM(CASE WHEN status='done' THEN 1 ELSE 0 END) done, SUM(CASE WHEN status NOT IN ('done','rejected','cancelled') THEN 1 ELSE 0 END) active FROM requests").fetchone()
+    problems=c.execute("SELECT r.number room, COUNT(*) cnt FROM requests q JOIN rooms r ON q.room_id=r.id GROUP BY q.room_id ORDER BY cnt DESC LIMIT 8").fetchall()
+    urgent=c.execute("SELECT q.id,r.number room,q.description,q.priority FROM requests q JOIN rooms r ON q.room_id=r.id WHERE q.priority IN ('high','critical') AND q.status NOT IN ('done','rejected','cancelled') ORDER BY q.id DESC LIMIT 10").fetchall()
+    c.close(); buf=BytesIO(); doc=SimpleDocTemplate(buf,pagesize=A4,rightMargin=38,leftMargin=38,topMargin=40,bottomMargin=40)
+    styles=getSampleStyleSheet(); styles.add(ParagraphStyle(name='RuHead',fontName='SchoolFlowCyr',fontSize=18,leading=23,spaceAfter=14)); styles.add(ParagraphStyle(name='RuBody',fontName='SchoolFlowCyr',fontSize=9,leading=14,spaceAfter=7)); styles.add(ParagraphStyle(name='RuSection',fontName='SchoolFlowCyr',fontSize=12,leading=16,spaceBefore=16,spaceAfter=8))
+    P=lambda x: Paragraph(escape(str(x or '—')),styles['RuBody'])
+    story=[Paragraph('SchoolFlow — отчёт для директора',styles['RuHead']),P('Дата формирования: '+datetime.now().strftime('%d.%m.%Y %H:%M')),P('Показатели отражают состояние базы данных на момент формирования.'),Paragraph('Сводка',styles['RuSection']),P(f"Всего заявок: {totals['total'] or 0}. Активных: {totals['active'] or 0}. Завершённых: {totals['done'] or 0}."),Paragraph('Кабинеты с наибольшим числом обращений',styles['RuSection'])]
+    for x in problems: story.append(P(f"Кабинет {x['room']}: {x['cnt']} обращений"))
+    if not problems: story.append(P('Нет данных.'))
+    story.append(Paragraph('Активные срочные заявки',styles['RuSection']))
+    for x in urgent: story.append(P(f"№{x['id']} · кабинет {x['room']} · {x['priority']}: {str(x['description'] or '')[:160]}"))
+    if not urgent: story.append(P('Срочных активных заявок нет.'))
+    story.append(Spacer(1,16));story.append(P('ИИ-диагностика носит предварительный характер. Решения о безопасности принимает ответственный специалист.'))
+    doc.build(story);buf.seek(0)
+    return StreamingResponse(buf,media_type='application/pdf',headers={'Content-Disposition':'attachment; filename="schoolflow_director_report.pdf"','Cache-Control':'no-store'})
 
 @app.get("/api/export/requests.csv")
 def export_requests(authorization: str | None = Header(None)):
