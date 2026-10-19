@@ -34,7 +34,7 @@ route('/register', () => html`<div class="auth">${authSide}<div class="auth-r"><
   <div class="fld"><label for="rn">Имя и фамилия</label><input class="input" id="rn" required minlength="2"></div>
   <div class="fld"><label for="rl">Логин</label><input class="input" id="rl" autocomplete="username" required minlength="3"></div>
   <div class="fld"><label for="rp">Пароль</label><input class="input" id="rp" type="password" autocomplete="new-password" required minlength="6"></div>
-  <div class="fld"><label for="invite-code">Персональный код от администратора</label><input class="input" id="invite-code" required minlength="16" autocomplete="off" placeholder="SCH-…"><p class="muted sm">Для регистрации учителя потребуется одноразовый код, выданный администрацией школы.</p></div>
+  <p class="muted sm signup-explain">После регистрации администратор проверит вашу учётную запись и назначит роль. До подтверждения вход будет ограничен.</p>
   <button class="btn xl">Создать аккаунт</button><p class="muted"><a href="#/login" class="lnk">Вернуться ко входу</a></p></form></div></div>`, { auth: false });
 async function doLogin(login, password) {
   try { const d = await api('/api/login', { method: 'POST', body: { login: login.trim(), password } }); enter(d.token, d.user); toast('Добро пожаловать, ' + d.user.name.split(' ')[0]); }
@@ -44,7 +44,7 @@ ACT.togglePass = el => { const p=$('#'+el.dataset.target); p.type=p.type==='pass
 FORM.login = () => doLogin($('#lg').value, $('#pw').value);
 ACT.demoLogin = el => doLogin(el.dataset.v, '1234');
 FORM.register = async () => {
-  try { const d = await api('/api/register', { method: 'POST', body: { name: $('#rn').value.trim(), login: $('#rl').value.trim(), password: $('#rp').value, role: 'teacher', invite_code: $('#invite-code').value.trim() } }); enter(d.token, d.user); toast('Аккаунт создан'); }
+  try { await api('/api/register', { method: 'POST', body: { name: $('#rn').value.trim(), login: $('#rl').value.trim(), password: $('#rp').value } }); toast('Заявка отправлена. Дождитесь подтверждения администратора'); location.hash='#/login'; }
   catch (e) { toast(e.message, 'err'); }
 };
 
@@ -190,9 +190,8 @@ function completeModal(id) {
     <div class="progress" id="c-prog" hidden><i></i></div></div><div class="mf"><button type="button" class="btn alt" data-act="closeModal">Отмена</button><button class="btn" id="c-btn">Завершить</button></div></form>`);
 }
 ACT.closeModal = closeModal;
-ACT.moreMenu = () => modal(html`<div class="mh"><span>Другие разделы</span><button class="btn ghost sm" data-act="closeModal" aria-label="Закрыть">${ic('x')}</button></div>
-  <nav class="more-list" aria-label="Другие разделы">${navMore().map(([p, i, l]) => html`<a href="#${p}">${ic(i)}<span>${l}</span></a>`)}
-  <a href="#/notifications">${ic('bell')}<span>Уведомления</span></a><a href="#/profile">${ic('user')}<span>Профиль и выход</span></a></nav>`);
+ACT.moreMenu = () => { location.hash = '#/more'; };
+route('/more', () => ({title:'Ещё',html:html`${head({title:'Ещё',sub:'Инструменты и разделы SchoolFlow'})}<div class="more-tiles" aria-label="Дополнительные разделы">${[...navMore(),['/notifications','bell','Уведомления'],['/profile','user','Мой профиль']].filter(([p],i,arr)=>arr.findIndex(x=>x[0]===p)===i).map(([p,i,l])=>html`<a class="more-tile" href="#${p}"><span class="more-icon">${ic(i)}</span><span class="more-copy"><b>${l}</b><small>Открыть раздел</small></span><span class="more-arrow">→</span></a>`)}</div>`}));
 ACT.fillRes = el => { const t = $('#c-res'); t.value = (t.value.trim() ? t.value.trim() + '. ' : '') + el.dataset.v; t.focus(); };
 FORM.complete = async f => {
   const id = f.dataset.id, file = $('#c-img').files[0], b = $('#c-btn');
@@ -393,25 +392,22 @@ ACT.csv = () => download('/api/export/requests.csv', 'school_plus_requests.csv')
 
 /* ================= управление ================= */
 route('/admin', async () => {
-  const [users, workers, invites] = await Promise.all([api('/api/admin/users'), api('/api/admin/workers'), api('/api/admin/teacher-invites')]), maxA = Math.max(1, ...workers.map(w => w.active));
+  const [users, workers] = await Promise.all([api('/api/admin/users'), api('/api/admin/workers')]), maxA = Math.max(1, ...workers.map(w => w.active));
   return {
-    title: 'Управление', html: html`${head({ title: 'Управление', sub: 'Доступ сотрудников, приглашения, нагрузка и контроль работы.' })}
-    <div class="grid2" style="grid-template-columns:1.2fr 1fr"><section class="panel"><h2>Пользователи</h2><div class="rows">${users.map(x => html`<div class="row" style="grid-template-columns:1fr auto"><div><div class="t">${x.name}</div><div class="m"><span class="mono">${x.login}</span></div></div>
-      <select class="select" data-change="role" data-id="${x.id}" aria-label="Роль ${x.name}">${Object.entries(ROLE).map(([k, v]) => html`<option value="${k}" ${k === x.role ? 'selected' : ''}>${v}</option>`)}</select></div>`)}</div></section>
-    <div class="stack"><section class="panel invite-panel"><h2>Доступ учителей</h2><p class="muted sm">Регистрация доступна только по персональному одноразовому коду. Срок действия — 7 дней.</p><button class="btn" data-act="generateTeacherInvite">Создать код учителю</button><div class="invite-result" id="invite-result" role="status" aria-live="polite"></div><p class="muted sm">Выдано: ${invites.length} · использовано: ${invites.filter(i => i.used_at).length}. Код виден только при создании.</p></section><section class="panel"><h2>Нагрузка исполнителей</h2><div class="hbar">${workers.length ? workers.map(w => html`<div><span>${w.name.split(' ')[0]}</span><div class="bar"><i style="width:${w.active / maxA * 100}%"></i></div><b>${w.active}</b></div>`) : empty('Нет работников', '')}</div></section>
+    title: 'Управление', html: html`${head({ title: 'Управление', sub: 'Подтверждение регистрации, назначение ролей и нагрузка работников.' })}
+    <div class="grid2" style="grid-template-columns:1.2fr 1fr"><section class="panel"><h2>Пользователи</h2><div class="rows">${users.map(x => html`<div class="row" style="grid-template-columns:1fr auto"><div><div class="t">${x.name} ${!x.approved ? html`<span class="approval-pending">Ожидает подтверждения</span>` : ''}</div><div class="m"><span class="mono">${x.login}</span></div></div>
+      <div class="approve-controls"><select class="select" data-change="role" data-id="${x.id}" aria-label="Роль ${x.name}">${Object.entries(ROLE).filter(([k])=>k!=='admin'||x.role==='admin').map(([k, v]) => html`<option value="${k}" ${k === x.role ? 'selected' : ''}>${v}</option>`)}</select>${!x.approved ? html`<button class="btn sm" data-act="approveUser" data-id="${x.id}">Подтвердить</button>` : ''}</div></div>`)}</div></section>
+    <div class="stack"><section class="panel"><h2>Подтверждение сотрудников</h2><p class="muted sm">Новые пользователи не получают доступ к школьным данным, пока вы не назначите роль и не нажмёте «Подтвердить».</p><div class="pb"><b>Ожидают: ${users.filter(x=>!x.approved).length}</b></div></section><section class="panel"><h2>Нагрузка исполнителей</h2><div class="hbar">${workers.length ? workers.map(w => html`<div><span>${w.name.split(' ')[0]}</span><div class="bar"><i style="width:${w.active / maxA * 100}%"></i></div><b>${w.active}</b></div>`) : empty('Нет работников', '')}</div></section>
       <section class="panel"><h2>Демо-данные</h2><div class="pb" style="display:grid;gap:12px"><p class="sm muted">Добавляет 16 тестовых заявок разных статусов, чтобы показать аналитику и карту на защите. Их можно удалить в один клик.</p><div style="display:flex;gap:8px"><button class="btn" data-act="seed">Добавить</button><button class="btn warn" data-act="unseed">Удалить демо-данные</button></div></div></section></div></div>`
   };
 }, { roles: ['admin'] });
-ACT.generateTeacherInvite = async () => {
-  try {
-    const r = await api('/api/admin/teacher-invites',{method:'POST'});
-    const out = $('#invite-result');
-    if (out) out.innerHTML = str(html`<div class="invite-code"><b>${r.code}</b><button class="btn sm alt" data-act="copyTeacherInvite" data-code="${r.code}">Копировать</button></div><p class="muted sm">Действует до ${r.expires_at}. Передайте код только нужному учителю.</p>`);
-    toast('Приглашение создано');
-  } catch(e) {toast(e.message,'err');}
+ACT.approveUser = async el => {
+  const row=el.closest('.row'),select=row?.querySelector('select[data-change="role"]');
+  if(!select || !confirm('Подтвердить пользователя и назначить выбранную роль?'))return;
+  try {await api(`/api/admin/users/${el.dataset.id}?role=${encodeURIComponent(select.value)}`,{method:'PATCH'});toast('Пользователь подтверждён');navigate();}
+  catch(e){toast(e.message,'err');}
 };
-ACT.copyTeacherInvite = async el => {try { await navigator.clipboard.writeText(el.dataset.code); toast('Код скопирован'); }catch {toast('Выделите и скопируйте код вручную','err');}};
-ACT.role = async el => { try { await api(`/api/admin/users/${el.dataset.id}?role=${encodeURIComponent(el.value)}`, { method: 'PATCH' }); toast('Роль обновлена'); } catch (e) { toast(e.message, 'err'); navigate(); } };
+ACT.role = async el => { if (el.closest('.row')?.querySelector('.approval-pending')) return; try { await api(`/api/admin/users/${el.dataset.id}?role=${encodeURIComponent(el.value)}`, { method: 'PATCH' }); toast('Роль обновлена'); } catch (e) { toast(e.message, 'err'); navigate(); } };
 ACT.seed = () => mutate(async () => { const d = await api('/api/admin/demo-seed', { method: 'POST' }); toast(`Добавлено заявок: ${d.added}`); });
 ACT.unseed = () => confirm('Удалить все демо-заявки?') && mutate(async () => { const d = await api('/api/admin/demo-seed', { method: 'DELETE' }); toast(`Удалено: ${d.removed}`); });
 

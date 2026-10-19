@@ -41,7 +41,7 @@ async function api(path, { method = 'GET', body, form } = {}) {
   if (body !== undefined) { headers['Content-Type'] = 'application/json'; data = JSON.stringify(body); } else if (form) data = form;
   let r;
   try { r = await fetch(path, { method, headers, body: data }); } catch { throw new Error('Нет связи с сервером'); }
-  if (r.status === 401 && S.token) { signOut(true); throw new Error('Сессия истекла. Войдите снова'); }
+  if ((r.status === 401 || (r.status === 403 && path === '/api/me')) && S.token) { signOut(true); throw new Error('Сессия истекла. Войдите снова'); }
   if (!r.ok) {
     let d = {}; try { d = await r.json(); } catch { /* пустое тело */ }
     throw new Error(typeof d.detail === 'string' ? d.detail : Array.isArray(d.detail) ? 'Проверьте заполнение полей' : `Ошибка запроса (${r.status})`);

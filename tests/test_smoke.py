@@ -21,7 +21,7 @@ T,W,A,D=[tokens[k] for k in ('teacher','worker','admin','director')]
 r=request('POST','/api/register',json={'name':'Test User','login':'sixpwduser','password':'abc123','role':'teacher'})
 check(r.status_code==200,'6 character password accepted')
 r=request('POST','/api/register',json={'name':'Unsafe Worker','login':'unsafe-worker','password':'abc123','role':'worker'})
-check(r.status_code==403,'worker self signup denied')
+check(r.status_code==200 and r.json().get('pending'),'worker role request stays pending')
 r=request('POST','/api/admin/rooms',A,json={'number':'000','floor':0})
 check(r.status_code==200,f'create floor 0: {r.text}')
 roomid=r.json().get('id')
@@ -63,6 +63,9 @@ check(request('POST',f'/api/requests/{rid}/complete',W,data={'resolution':'По�
 check(request('POST',f'/api/requests/{rid}/confirm',T,json={'accepted':True}).status_code==200,'repair accepted')
 check(len(request('GET',f'/api/requests/{rid}/attempts',T).json())==2,'two repair attempts')
 # password revokes old token
+pending = next(u for u in request('GET','/api/admin/users',A).json() if u['login']=='sixpwduser')
+check(request('POST','/api/login',json={'login':'sixpwduser','password':'abc123'}).status_code==403,'signup denied until approved')
+check(request('PATCH',f"/api/admin/users/{pending['id']}?role=teacher",A).status_code==200,'admin approves signup')
 newtoken=request('POST','/api/login',json={'login':'sixpwduser','password':'abc123'}).json()['token']
 check(request('PATCH','/api/profile/password',newtoken,json={'old_password':'abc123','new_password':'def456'}).status_code==200,'change password six symbols')
 check(request('GET','/api/me',newtoken).status_code==401,'previous token revoked')

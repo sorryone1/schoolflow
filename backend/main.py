@@ -210,7 +210,7 @@ def init():
         c.executemany("INSERT INTO rooms(number,floor) VALUES(?,?)", [(f"{floor}{n:02}", floor) for floor in range(1, 5) for n in range(1, 9)])
     if DEMO_MODE and not c.execute("SELECT 1 FROM users WHERE login='director'").fetchone():
         c.execute("INSERT INTO users(name,login,password_hash,role) VALUES(?,?,?,?)", ("Директор школы", "director", hash_password("1234"), "director"))
-    for col, typ, default in [("session_version","INTEGER","0")]:
+    for col, typ, default in [("session_version","INTEGER","0"),("approved","INTEGER","1")]:
         try: c.execute(f"ALTER TABLE users ADD COLUMN {col} {typ} DEFAULT {default}")
         except sqlite3.OperationalError: pass
     for col, typ, default in [("priority","TEXT","'medium'"),("after_image","TEXT","NULL"),("resolution","TEXT","NULL"),("materials","TEXT","NULL"),("rating","INTEGER","NULL"),("rating_comment","TEXT","NULL"),("category","TEXT","NULL"),("accepted_at","TEXT","NULL"),("started_at","TEXT","NULL"),("assigned_at","TEXT","NULL"),("repair_complexity","TEXT","NULL"),("estimated_minutes","INTEGER","NULL"),("ai_complexity","TEXT","NULL"),("ai_estimated_minutes","INTEGER","NULL"),("ai_specialist_required","TEXT","NULL"),("ai_category","TEXT","NULL"),("ai_priority","TEXT","NULL"),("ai_confidence","REAL","NULL"),("ai_tools","TEXT","NULL"),("ai_materials","TEXT","NULL"),("ai_checks","TEXT","NULL"),("ai_actions","TEXT","NULL"),("ai_safety","TEXT","NULL"),("ai_teacher_actions","TEXT","NULL"),("ai_danger_level","TEXT","NULL"),("ai_room_access","TEXT","NULL"),("ai_human_review","INTEGER","0"),("ai_status","TEXT","NULL"),("ai_error","TEXT","NULL"),("ai_question","TEXT","NULL"),("ai_answer","TEXT","NULL"),("confirmed_at","TEXT","NULL"),("confirmed_by","INTEGER","NULL")]:
@@ -244,12 +244,15 @@ def current_user(authorization):
         raise HTTPException(401, "Требуется вход в систему")
     try:
         p = jwt.decode(token, SECRET, algorithms=["HS256"], options={"verify_sub": False})
-        c = db(); u = c.execute("SELECT id,name,login,role,session_version FROM users WHERE id=?", (int(p["sub"]),)).fetchone(); c.close()
+        c = db(); u = c.execute("SELECT id,name,login,role,session_version,approved FROM users WHERE id=?", (int(p["sub"]),)).fetchone(); c.close()
         if not u:
             raise HTTPException(401, "Пользователь не найден")
         if int(p.get("ver", 0)) != int(u["session_version"] or 0):
             raise HTTPException(401, "Сессия отозвана. Войдите снова")
-        return dict(u)
+        user = dict(u)
+        if not user.get('approved', 1):
+            raise HTTPException(403, 'Аккаунт ожидает подтверждения администратора')
+        return user
     except jwt.ExpiredSignatureError:
         raise HTTPException(401, "Сессия истекла. Войдите снова")
     except (jwt.InvalidTokenError, ValueError, TypeError, KeyError):
@@ -266,7 +269,6 @@ class Register(BaseModel):
     login: str
     password: str
     role: str = "teacher"
-    invite_code: str = ""
 
 
 class Status(BaseModel):
@@ -288,28 +290,13 @@ def register(x: Register):
     name, login, password = x.name.strip(), x.login.strip(), x.password
     if len(name) < 2 or len(login) < 3 or len(password) < 6:
         raise HTTPException(400, "Заполните имя, логин и пароль не короче 6 символов")
-    if x.role not in ("teacher", "worker"):
-        raise HTTPException(400, "Недопустимая роль")
-    if x.role == "worker" and (not ALLOW_WORKER_SIGNUP or not DEMO_MODE):
-        raise HTTPException(403, "Регистрация работников отключена. Обратитесь к администратору")
     c = db()
     try:
-        # Invite validation and redemption must be in one write transaction.
-        c.execute("BEGIN IMMEDIATE")
-        if x.role == "teacher" and not DEMO_MODE:
-            code = x.invite_code.strip().upper()
-            if len(code) < 16:
-                raise HTTPException(403, "Нужен персональный код приглашения от администратора")
-            token_hash = hashlib.sha256(code.encode()).hexdigest()
-            invite = c.execute("SELECT id FROM teacher_invites WHERE token_hash=? AND used_at IS NULL AND expires_at>?", (token_hash, now_iso())).fetchone()
-            if not invite:
-                raise HTTPException(403, "Код неверный, просрочен или уже использован")
-        cur = c.execute("INSERT INTO users(name,login,password_hash,role) VALUES(?,?,?,?)", (name, login, hash_password(password), x.role))
-        if x.role == "teacher" and not DEMO_MODE:
-            c.execute("UPDATE teacher_invites SET used_at=?,used_by=? WHERE id=? AND used_at IS NULL", (now_iso(),cur.lastrowid,invite['id']))
+        # Public signup never controls role or access. Admin explicitly approves the account.
+        cur = c.execute("INSERT INTO users(name,login,password_hash,role,approved) VALUES(?,?,?,?,0)",
+                        (name, login, hash_password(password), 'teacher'))
         c.commit()
-        u = {"id": cur.lastrowid, "name": name, "login": login, "role": x.role}
-        return {"token": token_for(u), "user": u}
+        return {"ok": True, "pending": True, "message": "Заявка на регистрацию отправлена администратору"}
     except sqlite3.IntegrityError:
         c.rollback()
         raise HTTPException(409, "Такой логин уже существует")
@@ -336,6 +323,8 @@ def login(x: Login, request: Request):
         raise HTTPException(401, 'Неверный логин или пароль')
     c.execute('DELETE FROM login_limits WHERE key=?',(key,)); c.commit(); c.close()
     u = dict(u); u.pop('password_hash')
+    if not u.get('approved', 1):
+        raise HTTPException(403, 'Ваш аккаунт ожидает подтверждения администратора')
     return {'token': token_for(u), 'user': u}
 
 
@@ -1099,44 +1088,21 @@ def analytics(authorization: str | None = Header(None)):
     c.close()
     return {'total':total,'done':done,'pending_confirmation':pending_confirm,'rework_attempts':reworks,'completion_rate':round(done/total*100,1) if total else 0,'avg_response_minutes':round(avg_response or 0,1),'avg_repair_minutes':round(avg_repair or 0,1),'avg_total_minutes':round(avg_total or 0,1),'avg_minutes':round(avg_total or 0,1),'avg_rating':round(ratings['a'],2) if ratings['a'] is not None else None,'ratings_count':ratings['n'],'overdue':overdue,'sla_compliance':round(sla_ok/sla_total*100,1) if sla_total else None,'by_floor':byfloor,'by_category':bycategory,'by_room':byroom,'by_worker':byworker,'by_priority':bypriority}
 
-@app.post('/api/admin/teacher-invites')
-def new_teacher_invite(authorization: str | None = Header(None)):
-    u = current_user(authorization)
-    if u['role'] != 'admin': raise HTTPException(403, 'Только администратор')
-    code = 'SCH-' + secrets.token_hex(12).upper()
-    expires = (datetime.now() + timedelta(days=7)).isoformat(timespec='seconds')
-    c = db()
-    try:
-        c.execute('INSERT INTO teacher_invites(token_hash,created_by,created_at,expires_at) VALUES(?,?,?,?)',
-                  (hashlib.sha256(code.encode()).hexdigest(),u['id'],now_iso(),expires))
-        c.commit()
-    finally: c.close()
-    return {'code':code,'expires_at':expires,'note':'Код показывается только один раз. Сохраните его для учителя.'}
-
-@app.get('/api/admin/teacher-invites')
-def list_teacher_invites(authorization: str | None = Header(None)):
-    u = current_user(authorization)
-    if u['role'] != 'admin': raise HTTPException(403, 'Только администратор')
-    c = db()
-    rows = [dict(r) for r in c.execute('SELECT id,created_at,expires_at,used_at,used_by FROM teacher_invites ORDER BY id DESC LIMIT 100')]
-    c.close()
-    return rows
-
 @app.get('/api/admin/users')
 def admin_users(authorization: str | None = Header(None)):
     u=current_user(authorization)
     if u['role']!='admin': raise HTTPException(403,'Только администратор')
-    c=db(); rows=[dict(x) for x in c.execute("SELECT id,name,login,role FROM users ORDER BY role,name").fetchall()]; c.close(); return rows
+    c=db(); rows=[dict(x) for x in c.execute("SELECT id,name,login,role,approved FROM users ORDER BY approved,role,name").fetchall()]; c.close(); return rows
 
 @app.patch('/api/admin/users/{uid}')
 def admin_user_role(uid:int, role:str, authorization: str | None = Header(None)):
     u=current_user(authorization)
     if u['role']!='admin': raise HTTPException(403,'Только администратор')
-    if role not in ('teacher','worker','admin','director'): raise HTTPException(400,'Недопустимая роль')
+    if role not in ('teacher','worker','director'): raise HTTPException(400,'Недопустимая роль')
     c=db(); row=c.execute('SELECT role FROM users WHERE id=?',(uid,)).fetchone();
     if not row: c.close(); raise HTTPException(404,'Пользователь не найден')
     if row['role']=='admin' and role!='admin' and c.execute("SELECT COUNT(*) FROM users WHERE role='admin'").fetchone()[0] <= 1: c.close(); raise HTTPException(400,'Нельзя убрать роль у последнего администратора')
-    c.execute('UPDATE users SET role=?,session_version=session_version+1 WHERE id=?',(role,uid)); c.commit(); c.close(); return {'ok':True}
+    c.execute('UPDATE users SET role=?,approved=1,session_version=session_version+1 WHERE id=?',(role,uid)); c.commit(); c.close(); return {'ok':True}
 
 @app.patch("/api/requests/{rid}")
 def update_request(rid: int, x: Status, authorization: str | None = Header(None)):
