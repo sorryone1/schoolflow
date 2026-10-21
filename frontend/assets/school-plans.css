@@ -1,0 +1,49 @@
+/* ШКОЛА+ · цифровые планы · внешний интерфейс не меняется */
+.sp-plan-wrap {min-width:0}
+.sp-plan-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;border:1px solid var(--line-2);border-radius:var(--r);background:var(--surface);scrollbar-width:thin}
+.sp-plan-scroll:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.sp-vector{min-width:690px}
+.sp-vector svg{display:block;width:100%;height:auto;color:var(--ink);font-family:var(--font);text-rendering:geometricPrecision}
+.sp-canvas{fill:var(--surface)}
+.sp-outline{fill:none;stroke:var(--line-2);stroke-width:1.5}
+.sp-corridor{fill:color-mix(in srgb,var(--ink) 3%,var(--surface));stroke:var(--line-2);stroke-width:1.2}
+.sp-corridor-title{font:500 13px var(--mono);letter-spacing:.32em;text-anchor:middle;fill:var(--ink-3)}
+.sp-title{fill:var(--ink);font:650 23px var(--font);letter-spacing:.04em}
+.sp-title-suffix{fill:var(--ink-3);font:500 11px var(--mono);letter-spacing:.14em}
+.sp-footnote{fill:var(--ink-3);font:11px var(--font)}
+.sp-service{fill:color-mix(in srgb,var(--ink) 5%,var(--surface));stroke:var(--line-2);stroke-width:1.5}
+.sp-facility-line{fill:none;stroke:var(--ink-2);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sp-zone{fill:color-mix(in srgb,#367db7 10%,var(--surface));stroke:color-mix(in srgb,#4276a3 38%,var(--line-2));stroke-width:1.3;vector-effect:non-scaling-stroke;transition:fill .16s,stroke .16s}
+.sp-public{fill:var(--surface);stroke:var(--line-2)}
+.sp-service{stroke:var(--line-2)}
+.sp-zone.sp-no-record{opacity:.76}
+.sp-room-label{fill:var(--ink);text-anchor:middle;font-weight:650;letter-spacing:.01em;pointer-events:none;dominant-baseline:middle}
+.sp-room-subtitle{fill:var(--ink-2);font-size:10px;text-anchor:middle;pointer-events:none;letter-spacing:.055em}
+.sp-room-indicator{fill:var(--crit);stroke:var(--surface);stroke-width:1.5;pointer-events:none}
+.sp-zone-link{cursor:pointer;outline:none}
+.sp-zone-link:hover .sp-zone,.sp-zone-link:focus .sp-zone{stroke:var(--accent);stroke-width:3;filter:brightness(.97)}
+.sp-zone-link:focus-visible .sp-zone{stroke:var(--focus);stroke-width:4}
+.sp-zone-link.sp-selected .sp-zone,.sp-zone.sp-selected{stroke:var(--accent);stroke-width:4}
+.sp-status-1{fill:color-mix(in srgb,var(--low) 16%,var(--surface))}
+.sp-status-2{fill:color-mix(in srgb,var(--med) 22%,var(--surface))}
+.sp-status-3{fill:color-mix(in srgb,var(--high) 31%,var(--surface))}
+.sp-status-4{fill:color-mix(in srgb,var(--crit) 34%,var(--surface))}
+.sp-heat-0{fill:var(--surface)}
+.sp-heat-1{fill:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.sp-heat-2{fill:color-mix(in srgb,var(--accent) 24%,var(--surface))}
+.sp-heat-3{fill:color-mix(in srgb,var(--accent) 42%,var(--surface))}
+.sp-heat-4{fill:color-mix(in srgb,var(--accent) 62%,var(--surface))}
+.sp-exit rect{fill:var(--ink)}
+.sp-exit text{fill:var(--bg);font:700 10px var(--mono);text-anchor:middle;letter-spacing:.02em}
+.sp-hint{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;color:var(--ink-2);font-size:12.5px;margin:12px 0 0}
+.sp-hint span{color:var(--ink-3)}
+.sp-unshown{padding:14px 0;border-top:1px solid var(--line);margin-top:16px;display:grid;gap:10px}
+.sp-empty-floor{padding:36px 20px;border:1px solid var(--line-2);background:var(--surface)}
+@media(max-width:700px){.sp-vector{min-width:750px}.sp-plan-scroll{border-radius:2px}.sp-hint{font-size:12px}}
+@media(prefers-reduced-motion:reduce){.sp-zone{transition:none}}
+@media print{.sp-plan-scroll{overflow:visible}.sp-vector{min-width:0}.sp-zone-link:hover .sp-zone{filter:none}}
+
+.sp-original{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+.sp-original summary{cursor:pointer;color:var(--ink-2);font-size:12.5px;outline-offset:3px;width:fit-content}
+.sp-original summary:hover{color:var(--ink)}
+.sp-original img{display:block;width:100%;height:auto;margin-top:14px;border:1px solid var(--line);border-radius:var(--r)}
