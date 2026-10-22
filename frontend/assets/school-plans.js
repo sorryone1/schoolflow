@@ -155,9 +155,11 @@ function renderSchoolFloorPlan({ floor, rooms, mode, selRoom, maxRecent }) {
   const fac = data.facilities.map(schoolFacility).join('');
   const exits = (data.exits || []).map(([x,y]) => `<g class="sp-exit" transform="translate(${x} ${y})"><rect width="75" height="23" rx="3"/><text x="37.5" y="15">ВЫХОД</text></g>`).join('');
   const content=`<svg viewBox="0 0 1200 550" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Схема ${floor} этажа, интерактивная карта помещений" preserveAspectRatio="xMidYMid meet"><title>Интерактивный план ${floor} этажа</title><rect width="1200" height="550" rx="6" class="sp-canvas"/><path d="M45 58H1150 M45 491H1150" class="sp-outline"/>${structural}<text x="600" y="305" class="sp-corridor-title">К О Р И Д О Р</text>${fac}${layers}${exits}<text x="60" y="34" class="sp-title">${floor} ЭТАЖ</text><text x="1135" y="34" class="sp-title-suffix" text-anchor="end">СХЕМА ПОМЕЩЕНИЙ</text><text x="1135" y="527" class="sp-footnote" text-anchor="end">Не является планом эвакуации</text></svg>`;
-  return html`<section class="sp-plan-wrap" aria-label="Схема помещений"><div class="sp-plan-scroll" tabindex="0" aria-label="Схема этажа, прокрутите по горизонтали при необходимости"><div class="sp-vector">${raw(content)}</div></div>
+  return html`<section class="sp-plan-wrap" aria-label="Планы помещений">
+    <div class="sp-real-plan"><div class="sp-real-plan-heading"><h3>План ${floor} этажа</h3><p>Оригинальная схема школы № 2098</p></div><img src="/assets/floorplans/floor-${floor}.jpg" alt="План ${floor} этажа школы № 2098" loading="lazy"><a href="/assets/floorplans/floor-${floor}.jpg" target="_blank" rel="noopener noreferrer">Открыть план в полном размере ↗</a></div>
+    <details class="sp-digital-details"><summary>Интерактивная схема кабинетов и заявок</summary><div class="sp-plan-scroll" tabindex="0" aria-label="Схема этажа, прокрутите по горизонтали при необходимости"><div class="sp-vector">${raw(content)}</div></div>
     <p class="sp-hint">${mode === 'heat' ? 'Цветом отмечено количество обращений за последние 30 дней.' : 'Нажмите на отмеченное помещение, чтобы открыть его состояние и заявки.'} <span>Масштаб условный.</span></p>
-    <details class="sp-original"><summary>Посмотреть исходную схему со стенда</summary><img src="/assets/floorplans/floor-${floor}.jpg" alt="Исходная фотография схемы ${floor} этажа" loading="lazy"></details>
+    </details>
     ${unshown.length ? html`<div class="sp-unshown"><span class="muted sm">Другие помещения в системе:</span><div class="chips">${unshown.map(r=>html`<a class="chip" href="${planUrl({floor,room:r.id,mode})}">${r.number}</a>`)}</div></div>` : ''}
   </section>`;
 }
