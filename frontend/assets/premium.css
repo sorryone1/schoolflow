@@ -121,3 +121,20 @@ button,.btn,.card,.panel{box-shadow:none}
 .sp-digital-details>summary{cursor:pointer;padding:12px 14px;color:var(--ink);font-weight:650;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
 .sp-digital-details[open]>summary{margin-bottom:12px}
 @media(max-width:640px){.sp-real-plan{padding:8px}.sp-real-plan img{max-height:none}.sp-real-plan-heading{padding:4px}}
+
+
+/* SchoolFlow · compact, readable More navigation */
+.more-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:28px;max-width:1080px;margin:22px 0 72px}
+.more-group{min-width:0}
+.more-group h2{font-size:12px;font-weight:750;letter-spacing:.075em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+.more-list{border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.more-list-item{display:flex;align-items:center;gap:14px;min-height:62px;padding:11px 16px;text-decoration:none;color:var(--ink);border-bottom:1px solid var(--line);transition:background .15s}
+.more-list-item:last-child{border-bottom:0}
+.more-list-item:hover,.more-list-item:focus-visible{background:var(--hover);outline-offset:-3px}
+.more-list-icon{width:35px;height:35px;display:grid;place-items:center;color:var(--accent);background:color-mix(in srgb,var(--accent) 11%,transparent);border-radius:8px;flex:none}
+.more-list-icon .ic{width:18px;height:18px}
+.more-list-name{font-size:14px;font-weight:620;flex:1;min-width:0}
+.more-list-chevron{color:var(--ink-3);font-size:18px}
+@media(max-width:700px){.more-layout{grid-template-columns:1fr;gap:22px;margin-top:14px}.more-list-item{min-height:58px}}
+.sp-zone.sp-service.sp-no-record{opacity:1}
+.sp-zone-link .sp-service{cursor:pointer}
