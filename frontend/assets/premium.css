@@ -216,3 +216,18 @@ body:has(.sp-map-fit) .sp-room-label{font-weight:800;paint-order:stroke}
 body:has(.sp-map-fit) .sp-map-toolbar strong{font-size:17px}
 @media(min-width:1200px){body:has(.sp-map-fit) #view{padding-left:26px;padding-right:26px}}
 @media(max-width:760px){body:has(.sp-map-fit) .grid-d{display:grid;grid-template-columns:minmax(0,1fr)!important}body:has(.sp-map-fit) #view{padding-inline:10px}}
+
+
+/* Balanced interactive map: comfortably sized, complete, no pan/zoom controls. */
+body:has(.sp-map-fit) #view{width:100%;max-width:1180px;margin-inline:auto;padding-inline:clamp(16px,3vw,30px)}
+body:has(.sp-map-fit) .grid-d{display:grid;grid-template-columns:minmax(0,1fr)!important;gap:16px}
+body:has(.sp-map-fit) .sp-plan-wrap{max-width:100%;margin-inline:auto}
+body:has(.sp-map-fit) .sp-map-viewport{max-width:100%;overflow:hidden!important;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+body:has(.sp-map-fit) .sp-map-fit{width:100%!important;min-width:0!important;max-width:100%!important}
+body:has(.sp-map-fit) .sp-map-fit svg{display:block;width:100%;height:auto}
+body:has(.sp-map-fit) .sp-map-toolbar{margin-bottom:10px}
+body:has(.sp-map-fit) .sp-map-toolbar strong{font-size:15px}
+body:has(.sp-map-fit) .sp-map-toolbar p{font-size:12px}
+body:has(.sp-map-fit) .sp-room-label{font-weight:700}
+body:has(.sp-map-fit) #roomPanel{max-width:100%;margin-top:0}
+@media(max-width:760px){body:has(.sp-map-fit) #view{padding-inline:10px}body:has(.sp-map-fit) .grid-d{gap:12px}}
