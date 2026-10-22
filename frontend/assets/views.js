@@ -191,7 +191,20 @@ function completeModal(id) {
 }
 ACT.closeModal = closeModal;
 ACT.moreMenu = () => { location.hash = '#/more'; };
-route('/more', () => ({title:'Ещё',html:html`${head({title:'Ещё',sub:'Инструменты и разделы SchoolFlow'})}<div class="more-tiles" aria-label="Дополнительные разделы">${[...navMore(),['/notifications','bell','Уведомления'],['/profile','user','Мой профиль']].filter(([p],i,arr)=>arr.findIndex(x=>x[0]===p)===i).map(([p,i,l])=>html`<a class="more-tile" href="#${p}"><span class="more-icon">${ic(i)}</span><span class="more-copy"><b>${l}</b><small>Открыть раздел</small></span><span class="more-arrow">→</span></a>`)}</div>`}));
+route('/more', () => {
+  const entries = [...navMore(), ['/notifications','bell','Уведомления'], ['/profile','user','Мой профиль']]
+    .filter(([p],i,arr) => arr.findIndex(x => x[0] === p) === i);
+  const groups = [
+    ['Рабочие разделы', entries.filter(([p]) => !['/notifications','/profile','/settings','/rooms-settings'].includes(p))],
+    ['Управление и настройки', entries.filter(([p]) => ['/settings','/rooms-settings'].includes(p))],
+    ['Личное', entries.filter(([p]) => ['/notifications','/profile'].includes(p))]
+  ].filter(([,items])=>items.length);
+  return {title:'Ещё',html:html`${head({title:'Ещё',sub:'Дополнительные возможности и настройки'})}
+    <div class="more-layout">${groups.map(([name,items])=>html`<section class="more-group"><h2>${name}</h2>
+      <div class="more-list">${items.map(([p,i,l])=>html`<a class="more-list-item" href="#${p}">
+        <span class="more-list-icon">${ic(i)}</span><span class="more-list-name">${l}</span>
+        <span class="more-list-chevron" aria-hidden="true">→</span></a>`)}</div></section>`)}</div>`};
+});
 ACT.fillRes = el => { const t = $('#c-res'); t.value = (t.value.trim() ? t.value.trim() + '. ' : '') + el.dataset.v; t.focus(); };
 FORM.complete = async f => {
   const id = f.dataset.id, file = $('#c-img').files[0], b = $('#c-btn');
