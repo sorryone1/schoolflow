@@ -68,9 +68,10 @@ route('/', async () => {
     <div class="ledger">${k.map(([l, v, c]) => html`<div class="${c || ''}"><span>${l}</span><b>${v}</b></div>`)}</div>
     <div class="grid2"><section class="panel"><h2>${teacher ? 'Последние заявки' : 'Требует внимания'}<a class="sm" style="text-transform:none;letter-spacing:0" href="#/requests">Все заявки →</a></h2>
       <div class="rows">${list.length ? list.map(rowReq) : empty(teacher ? 'Заявок пока нет' : 'Всё спокойно', teacher ? 'Если что-то сломалось — создайте заявку.' : 'Активных заявок нет.', canCreate() && html`<a class="btn" href="#/new">Создать заявку</a>`)}</div></section>
-    <section class="panel"><h2>Состояние кабинетов<a class="sm" style="text-transform:none;letter-spacing:0" href="#/plan">План →</a></h2>
-      <div class="pulse">${[...new Set(rooms.map(r=>r.floor))].sort((a,b)=>a-b).map(f => html`<div class="fl"><span>${f} этаж</span><div class="cells">${rooms.filter(r => r.floor === f).map(r => html`<a href="${planUrl({ floor: f, room: r.id })}" class="${r.worst ? 'w' + r.worst : ''}" title="Кабинет ${r.number}${r.active ? ': ' + r.active + ' ' + roomWord(r.active) : ''}">${r.number.slice(1)}</a>`)}</div></div>`)}</div>
-      <div class="legend"><span><i style="background:var(--surface-2)"></i>норма</span><span><i style="background:var(--med)"></i>средний</span><span><i style="background:var(--high)"></i>высокий</span><span><i style="background:var(--crit)"></i>критический</span></div></section></div>`
+    <section class="panel rooms-overview-v3"><div class="rooms-overview-head"><div><h2>Помещения школы</h2><p>Состояние и активные обращения по этажам</p></div><a class="btn alt sm" href="#/plan">Открыть план →</a></div>
+      <div class="rooms-overview-stats"><span><b>${rooms.length}</b> помещений</span><span><b>${rooms.filter(r=>r.active).length}</b> с заявками</span><span><b>${rooms.filter(r=>r.worst>=3).length}</b> требуют внимания</span></div>
+      <div class="rooms-overview-floors">${[...new Set(rooms.map(r=>r.floor))].sort((a,b)=>a-b).map(f=>{const list=rooms.filter(r=>r.floor===f);return html`<div class="rooms-overview-floor"><div class="rooms-overview-floor-head"><strong>${f} этаж</strong><span>${list.filter(r=>r.active).length} проблемных из ${list.length}</span></div><div class="rooms-overview-list">${list.map(r=>html`<a href="${planUrl({floor:f,room:r.id})}" class="rooms-overview-room ${r.worst?'is-issue':''}" title="${r.number}: ${r.active?r.active+' активных заявок':'без проблем'}"><i class="rooms-overview-dot ${r.worst?'w'+r.worst:''}"></i><span>${r.number}</span>${r.active?html`<small>${r.active}</small>`:''}</a>`)}</div></div>`})}</div>
+    </section></div>`
   };
 });
 
@@ -193,17 +194,11 @@ ACT.closeModal = closeModal;
 ACT.moreMenu = () => { location.hash = '#/more'; };
 route('/more', () => {
   const entries = [...navMore(), ['/notifications','bell','Уведомления'], ['/profile','user','Мой профиль']]
-    .filter(([p],i,arr) => arr.findIndex(x => x[0] === p) === i);
-  const groups = [
-    ['Рабочие разделы', entries.filter(([p]) => !['/notifications','/profile','/settings','/rooms-settings'].includes(p))],
-    ['Управление и настройки', entries.filter(([p]) => ['/settings','/rooms-settings'].includes(p))],
-    ['Личное', entries.filter(([p]) => ['/notifications','/profile'].includes(p))]
-  ].filter(([,items])=>items.length);
-  return {title:'Ещё',html:html`${head({title:'Ещё',sub:'Дополнительные возможности и настройки'})}
-    <div class="more-layout">${groups.map(([name,items])=>html`<section class="more-group"><h2>${name}</h2>
-      <div class="more-list">${items.map(([p,i,l])=>html`<a class="more-list-item" href="#${p}">
-        <span class="more-list-icon">${ic(i)}</span><span class="more-list-name">${l}</span>
-        <span class="more-list-chevron" aria-hidden="true">→</span></a>`)}</div></section>`)}</div>`};
+    .filter(([p],i,arr)=>arr.findIndex(x=>x[0]===p)===i);
+  const descriptions = {'/plan':'Кабинеты и заявки на карте','/analytics':'Статистика обращений','/notifications':'Новые события и сообщения','/profile':'Личные данные и настройки','/rooms-settings':'Список кабинетов и этажей','/settings':'Параметры приложения','/requests':'Все обращения','/inventory':'Материалы и остатки','/maintenance':'Плановые работы','/workers':'Сотрудники и нагрузка'};
+  return {title:'Ещё',html:html`${head({title:'Разделы',sub:'Всё необходимое в одном месте'})}
+    <div class="more-v3-head"><div><strong>Быстрый доступ</strong><p>Инструменты школы, настройки и ваш профиль</p></div><a href="#/" class="btn alt sm">← Обзор</a></div>
+    <div class="more-v3-grid">${entries.map(([p,i,l])=>html`<a class="more-v3-item" href="#${p}"><span class="more-v3-icon">${ic(i)}</span><span class="more-v3-copy"><strong>${l}</strong><small>${descriptions[p] || 'Открыть раздел'}</small></span><span class="more-v3-arrow">↗</span></a>`)}</div>`};
 });
 ACT.fillRes = el => { const t = $('#c-res'); t.value = (t.value.trim() ? t.value.trim() + '. ' : '') + el.dataset.v; t.focus(); };
 FORM.complete = async f => {
@@ -532,3 +527,10 @@ route('/rooms-settings', async () => {
 },{roles:['admin']});
 FORM.roomCreate = f => mutate(()=>api('/api/admin/rooms',{method:'POST',body:{number:$('#new-room-number').value.trim(),floor:Number($('#new-room-floor').value)}}),'Кабинет добавлен');
 ACT.removeRoom = el => {if(confirm('Удалить этот кабинет?')) mutate(()=>api('/api/admin/rooms/'+el.dataset.id,{method:'DELETE'}),'Кабинет удалён');};
+
+/* Map zoom: event delegation retains controls after navigation. */
+const SCHOOL_MAP_ZOOM = {value:1};
+function setSchoolMapZoom(value){const target=document.querySelector('.sp-map-zoomable');if(!target)return;SCHOOL_MAP_ZOOM.value=Math.max(1,Math.min(2.5,Math.round(value*10)/10));target.style.width=(SCHOOL_MAP_ZOOM.value*100)+'%';const reset=document.querySelector('[data-act="mapZoomReset"]');if(reset)reset.textContent=Math.round(SCHOOL_MAP_ZOOM.value*100)+'%';}
+ACT.mapZoomIn=()=>setSchoolMapZoom(SCHOOL_MAP_ZOOM.value+.2);
+ACT.mapZoomOut=()=>setSchoolMapZoom(SCHOOL_MAP_ZOOM.value-.2);
+ACT.mapZoomReset=()=>setSchoolMapZoom(1);
