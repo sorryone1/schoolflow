@@ -234,6 +234,26 @@ def init():
 init()
 
 
+def ensure_plan_rooms():
+    """Create addressable maintenance zones without modifying existing requests."""
+    zones = {
+        1: ["Мужской туалет","Женский туалет","Туалет МГН","Гардероб","Кабинет врача","Мужская раздевалка","Женская раздевалка","Душевая","Спортивный зал","Зона мытья рук","Обеденный зал"],
+        2: ["Туалет 2 эт. (М)","Туалет 2 эт. (Ж)","Конференц-зал"],
+        3: ["Туалет 3 эт. (М)","Туалет 3 эт. (Ж)"],
+        4: ["Туалет 4 эт. (М)","Туалет 4 эт. (Ж)"],
+    }
+    c = db()
+    try:
+        for floor, labels in zones.items():
+            for name in labels:
+                c.execute("INSERT OR IGNORE INTO rooms(number,floor,status) VALUES(?,?,'ok')",(name,floor))
+        c.commit()
+    finally:
+        c.close()
+
+ensure_plan_rooms()
+
+
 def token_for(user):
     return jwt.encode({"sub": str(user["id"]), "role": user["role"], "ver": int(user.get("session_version") or 0), "exp": datetime.now(timezone.utc) + timedelta(hours=12)}, SECRET, algorithm="HS256")
 
