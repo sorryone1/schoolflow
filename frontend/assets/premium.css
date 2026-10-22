@@ -231,3 +231,10 @@ body:has(.sp-map-fit) .sp-map-toolbar p{font-size:12px}
 body:has(.sp-map-fit) .sp-room-label{font-weight:700}
 body:has(.sp-map-fit) #roomPanel{max-width:100%;margin-top:0}
 @media(max-width:760px){body:has(.sp-map-fit) #view{padding-inline:10px}body:has(.sp-map-fit) .grid-d{gap:12px}}
+
+
+/* Left-aligned map, keeping the balanced width and one-click interaction. */
+@media(min-width:1024px){
+ body:has(.sp-map-fit) #view{margin-left:0;margin-right:auto}
+ body:has(.sp-map-fit) .sp-plan-wrap{margin-left:0;margin-right:auto}
+}
