@@ -30,6 +30,8 @@ const SCHOOL_FLOOR_GEOMETRY = {
   2: {
     corridors:[[55,240,1075,105]],
     zones:[
+      {n:'Туалет 2 эт. (Ж)',label:'Ж · WC',x:733,y:351,w:65,h:120,t:'service'},
+      {n:'Туалет 2 эт. (М)',label:'М · WC',x:668,y:351,w:65,h:120,t:'service'},
       {n:'201',x:55,y:86,w:282,h:153,t:'study'},
       {n:'215',x:337,y:86,w:262,h:153,t:'study',sub:'IT-ПОЛИГОН'},
       {n:'235',x:599,y:86,w:162,h:153,t:'study'},
@@ -41,7 +43,6 @@ const SCHOOL_FLOOR_GEOMETRY = {
     ],
     facilities:[
       {k:'fire',x:55,y:351,w:65,h:120},{k:'stair',x:155,y:351,w:65,h:120},
-      {k:'wc',x:668,y:351,w:65,h:120},{k:'wc',x:733,y:351,w:65,h:120},
       {k:'lift',x:798,y:351,w:59,h:120},{k:'stair',x:857,y:351,w:72,h:120},
       {k:'stair',x:898,y:86,w:77,h:153}
     ]
@@ -49,6 +50,8 @@ const SCHOOL_FLOOR_GEOMETRY = {
   3: {
     corridors:[[77,238,1063,111]],
     zones:[
+      {n:'Туалет 3 эт. (Ж)',label:'Ж · WC',x:817,y:350,w:62,h:128,t:'service'},
+      {n:'Туалет 3 эт. (М)',label:'М · WC',x:748,y:350,w:69,h:128,t:'service'},
       {n:'305',x:107,y:89,w:144,h:149,t:'study'},
       {n:'303',x:251,y:89,w:140,h:149,t:'study'},
       {n:'302',x:391,y:89,w:142,h:149,t:'study'},
@@ -63,13 +66,14 @@ const SCHOOL_FLOOR_GEOMETRY = {
     ],
     facilities:[
       {k:'fire',x:77,y:350,w:76,h:128},{k:'stair',x:153,y:350,w:78,h:128},
-      {k:'wc',x:748,y:350,w:69,h:128},{k:'wc',x:817,y:350,w:62,h:128},
       {k:'lift',x:879,y:350,w:40,h:128},{k:'stair',x:919,y:350,w:42,h:128}
     ]
   },
   4: {
     corridors:[[105,245,1040,112]],
     zones:[
+      {n:'Туалет 4 эт. (Ж)',label:'Ж · WC',x:812,y:357,w:67,h:124,t:'service'},
+      {n:'Туалет 4 эт. (М)',label:'М · WC',x:736,y:357,w:76,h:124,t:'service'},
       {n:'405',x:112,y:86,w:135,h:159,t:'study'},
       {n:'403',x:247,y:86,w:139,h:159,t:'study'},
       {n:'411',x:386,y:86,w:92,h:159,t:'study'},
@@ -83,7 +87,6 @@ const SCHOOL_FLOOR_GEOMETRY = {
     ],
     facilities:[
       {k:'fire',x:105,y:357,w:73,h:124},{k:'stair',x:178,y:357,w:77,h:124},
-      {k:'wc',x:736,y:357,w:76,h:124},{k:'wc',x:812,y:357,w:67,h:124},
       {k:'lift',x:879,y:357,w:38,h:124},{k:'stair',x:917,y:357,w:36,h:124}
     ]
   }
@@ -95,7 +98,9 @@ const SCHOOL_ZONE_ALIASES = {
   'Спортивный зал':['Спортзал','Спортивный зал 1','Спортивный зал 2'],
   'Гардероб':['Гардероб 1','Гардероб 2'],
   'Обеденный зал':['Столовая'],
-  'Туалет МГН':['Туалет МГН 1']
+  'Туалет МГН':['Туалет МГН 1'],
+  'Мужской туалет':['Туалет 1 эт. (М)'],
+  'Женский туалет':['Туалет 1 эт. (Ж)']
 };
 function schoolFindRoom(rooms, number) {
   const names = [number, ...(SCHOOL_ZONE_ALIASES[number] || [])];
@@ -155,11 +160,10 @@ function renderSchoolFloorPlan({ floor, rooms, mode, selRoom, maxRecent }) {
   const fac = data.facilities.map(schoolFacility).join('');
   const exits = (data.exits || []).map(([x,y]) => `<g class="sp-exit" transform="translate(${x} ${y})"><rect width="75" height="23" rx="3"/><text x="37.5" y="15">ВЫХОД</text></g>`).join('');
   const content=`<svg viewBox="0 0 1200 550" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Схема ${floor} этажа, интерактивная карта помещений" preserveAspectRatio="xMidYMid meet"><title>Интерактивный план ${floor} этажа</title><rect width="1200" height="550" rx="6" class="sp-canvas"/><path d="M45 58H1150 M45 491H1150" class="sp-outline"/>${structural}<text x="600" y="305" class="sp-corridor-title">К О Р И Д О Р</text>${fac}${layers}${exits}<text x="60" y="34" class="sp-title">${floor} ЭТАЖ</text><text x="1135" y="34" class="sp-title-suffix" text-anchor="end">СХЕМА ПОМЕЩЕНИЙ</text><text x="1135" y="527" class="sp-footnote" text-anchor="end">Не является планом эвакуации</text></svg>`;
-  return html`<section class="sp-plan-wrap" aria-label="Планы помещений">
-    <div class="sp-real-plan"><div class="sp-real-plan-heading"><h3>План ${floor} этажа</h3><p>Оригинальная схема школы № 2098</p></div><img src="/assets/floorplans/floor-${floor}.jpg" alt="План ${floor} этажа школы № 2098" loading="lazy"><a href="/assets/floorplans/floor-${floor}.jpg" target="_blank" rel="noopener noreferrer">Открыть план в полном размере ↗</a></div>
-    <details class="sp-digital-details"><summary>Интерактивная схема кабинетов и заявок</summary><div class="sp-plan-scroll" tabindex="0" aria-label="Схема этажа, прокрутите по горизонтали при необходимости"><div class="sp-vector">${raw(content)}</div></div>
-    <p class="sp-hint">${mode === 'heat' ? 'Цветом отмечено количество обращений за последние 30 дней.' : 'Нажмите на отмеченное помещение, чтобы открыть его состояние и заявки.'} <span>Масштаб условный.</span></p>
-    </details>
+  return html`<section class="sp-plan-wrap" aria-label="Интерактивный план">
+    <p class="sp-hint">Нажмите на помещение, чтобы увидеть заявки и создать новую. Все туалеты доступны для обращений. Схема составлена по фотографиям школьных стендов и не предназначена для эвакуации.</p>
+    <div class="sp-plan-scroll" tabindex="0" aria-label="Интерактивная схема этажа. На телефоне прокручивается горизонтально"><div class="sp-vector">${raw(content)}</div></div>
+    <p class="sp-hint">${mode === 'heat' ? 'Интенсивность цвета показывает количество обращений за последние 30 дней.' : 'Цвет помещения отражает приоритет активных заявок.'}</p>
     ${unshown.length ? html`<div class="sp-unshown"><span class="muted sm">Другие помещения в системе:</span><div class="chips">${unshown.map(r=>html`<a class="chip" href="${planUrl({floor,room:r.id,mode})}">${r.number}</a>`)}</div></div>` : ''}
   </section>`;
 }
