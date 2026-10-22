@@ -204,3 +204,15 @@ button,.btn,.card,.panel{box-shadow:none}
 .sp-zone-link .sp-zone{stroke-width:2;vector-effect:non-scaling-stroke}
 .sp-zone-link:hover .sp-zone,.sp-zone-link:focus-visible .sp-zone{stroke-width:3}
 @media(max-width:760px){.sp-map-viewport{border-radius:8px}.sp-map-fit,.sp-vector.sp-map-fit{min-width:0!important;width:100%!important}.sp-map-toolbar p{font-size:11px}}
+
+/* Larger map canvas without scrolling: dedicate the full content width to the floor. */
+body:has(.sp-map-fit) #view{max-width:1560px;width:100%;margin-inline:auto}
+body:has(.sp-map-fit) .grid-d{grid-template-columns:minmax(0,1fr)!important;gap:20px}
+body:has(.sp-map-fit) .grid-d>div{min-width:0}
+body:has(.sp-map-fit) #roomPanel{width:100%;max-width:none}
+body:has(.sp-map-fit) .sp-map-viewport{padding:3px;overflow:hidden!important}
+body:has(.sp-map-fit) .sp-map-fit{width:100%!important;min-width:0!important}
+body:has(.sp-map-fit) .sp-room-label{font-weight:800;paint-order:stroke}
+body:has(.sp-map-fit) .sp-map-toolbar strong{font-size:17px}
+@media(min-width:1200px){body:has(.sp-map-fit) #view{padding-left:26px;padding-right:26px}}
+@media(max-width:760px){body:has(.sp-map-fit) .grid-d{display:grid;grid-template-columns:minmax(0,1fr)!important}body:has(.sp-map-fit) #view{padding-inline:10px}}
