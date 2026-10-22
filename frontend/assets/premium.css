@@ -184,57 +184,74 @@ button,.btn,.card,.panel{box-shadow:none}
 @media(prefers-reduced-motion:reduce){.sp-map-zoomable,.more-v3-item{transition:none}}
 
 
-/* Bigger readable floor plan, no manual zoom needed. Scroll sideways on small screens. */
-.sp-map-viewport{overflow-x:auto;max-width:100%;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
-.sp-map-large{width:155%;min-width:1100px;max-width:none}
-.sp-map-large svg{width:100%;height:auto}
-.sp-map-toolbar{margin-bottom:14px}
-.sp-room-label{font-weight:750}
-.sp-zone-link:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
-@media(max-width:800px){.sp-map-large{width:165%;min-width:1050px}}
-
-
-/* No dragging, panning or zoom controls: one-tap room selection. */
-.sp-map-viewport{width:100%;max-width:100%;overflow:hidden!important;scrollbar-width:none!important}
-.sp-map-viewport::-webkit-scrollbar{display:none}
-.sp-map-fit,.sp-vector.sp-map-fit{width:100%!important;min-width:0!important;max-width:100%!important}
-.sp-map-fit svg{display:block;width:100%;height:auto;max-width:100%}
-.sp-map-toolbar{margin-bottom:12px}
-.sp-zone-link{cursor:pointer;touch-action:manipulation}
-.sp-zone-link .sp-zone{stroke-width:2;vector-effect:non-scaling-stroke}
-.sp-zone-link:hover .sp-zone,.sp-zone-link:focus-visible .sp-zone{stroke-width:3}
-@media(max-width:760px){.sp-map-viewport{border-radius:8px}.sp-map-fit,.sp-vector.sp-map-fit{min-width:0!important;width:100%!important}.sp-map-toolbar p{font-size:11px}}
-
-/* Larger map canvas without scrolling: dedicate the full content width to the floor. */
-body:has(.sp-map-fit) #view{max-width:1560px;width:100%;margin-inline:auto}
-body:has(.sp-map-fit) .grid-d{grid-template-columns:minmax(0,1fr)!important;gap:20px}
-body:has(.sp-map-fit) .grid-d>div{min-width:0}
-body:has(.sp-map-fit) #roomPanel{width:100%;max-width:none}
-body:has(.sp-map-fit) .sp-map-viewport{padding:3px;overflow:hidden!important}
-body:has(.sp-map-fit) .sp-map-fit{width:100%!important;min-width:0!important}
-body:has(.sp-map-fit) .sp-room-label{font-weight:800;paint-order:stroke}
-body:has(.sp-map-fit) .sp-map-toolbar strong{font-size:17px}
-@media(min-width:1200px){body:has(.sp-map-fit) #view{padding-left:26px;padding-right:26px}}
-@media(max-width:760px){body:has(.sp-map-fit) .grid-d{display:grid;grid-template-columns:minmax(0,1fr)!important}body:has(.sp-map-fit) #view{padding-inline:10px}}
-
-
-/* Balanced interactive map: comfortably sized, complete, no pan/zoom controls. */
-body:has(.sp-map-fit) #view{width:100%;max-width:1180px;margin-inline:auto;padding-inline:clamp(16px,3vw,30px)}
-body:has(.sp-map-fit) .grid-d{display:grid;grid-template-columns:minmax(0,1fr)!important;gap:16px}
-body:has(.sp-map-fit) .sp-plan-wrap{max-width:100%;margin-inline:auto}
-body:has(.sp-map-fit) .sp-map-viewport{max-width:100%;overflow:hidden!important;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
-body:has(.sp-map-fit) .sp-map-fit{width:100%!important;min-width:0!important;max-width:100%!important}
-body:has(.sp-map-fit) .sp-map-fit svg{display:block;width:100%;height:auto}
-body:has(.sp-map-fit) .sp-map-toolbar{margin-bottom:10px}
-body:has(.sp-map-fit) .sp-map-toolbar strong{font-size:15px}
-body:has(.sp-map-fit) .sp-map-toolbar p{font-size:12px}
-body:has(.sp-map-fit) .sp-room-label{font-weight:700}
-body:has(.sp-map-fit) #roomPanel{max-width:100%;margin-top:0}
-@media(max-width:760px){body:has(.sp-map-fit) #view{padding-inline:10px}body:has(.sp-map-fit) .grid-d{gap:12px}}
-
-
-/* Left-aligned map, keeping the balanced width and one-click interaction. */
-@media(min-width:1024px){
- body:has(.sp-map-fit) #view{margin-left:0;margin-right:auto}
- body:has(.sp-map-fit) .sp-plan-wrap{margin-left:0;margin-right:auto}
+/* Floor plan page — one coherent layout, no accumulated overrides. */
+body:has(.sp-map-fit) #view{
+  box-sizing:border-box;
+  width:100%;
+  max-width:1360px;
+  margin-inline:auto;
+  padding-inline:clamp(16px,2.5vw,32px);
+}
+body:has(.sp-map-fit) .grid-d{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(270px,310px);
+  align-items:start;
+  gap:20px;
+}
+body:has(.sp-map-fit) .grid-d>div,
+body:has(.sp-map-fit) .sp-plan-wrap{min-width:0;width:100%;margin:0}
+body:has(.sp-map-fit) .sp-map-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin:0 0 12px;
+  gap:12px;
+}
+body:has(.sp-map-fit) .sp-map-toolbar strong{
+  font-size:16px;font-weight:700;letter-spacing:-.015em;
+}
+body:has(.sp-map-fit) .sp-map-toolbar p{font-size:12px;color:var(--ink-3);margin:3px 0 0}
+body:has(.sp-map-fit) .sp-map-viewport{
+  box-sizing:border-box;
+  width:100%;max-width:100%;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:0;
+  background:var(--surface);
+}
+body:has(.sp-map-fit) .sp-vector.sp-map-fit{
+  display:block;
+  width:100%;min-width:0;max-width:100%;
+}
+body:has(.sp-map-fit) .sp-map-fit svg{
+  display:block;width:100%;height:auto;
+}
+body:has(.sp-map-fit) .sp-room-label{font-weight:750}
+body:has(.sp-map-fit) #roomPanel{
+  box-sizing:border-box;width:100%;min-width:0;
+  border-radius:12px;
+  margin:0;
+  position:sticky;
+  top:90px;
+}
+body:has(.sp-map-fit) .sp-hint{
+  margin-top:10px;
+  color:var(--ink-3);
+  font-size:12px;
+  line-height:1.5;
+}
+body:has(.sp-map-fit) .sp-zone-link{cursor:pointer;touch-action:manipulation}
+body:has(.sp-map-fit) .sp-zone-link:hover .sp-zone,
+body:has(.sp-map-fit) .sp-zone-link:focus-visible .sp-zone{
+  stroke:var(--accent);stroke-width:3;
+}
+@media(max-width:1080px){
+  body:has(.sp-map-fit) .grid-d{grid-template-columns:minmax(0,1fr)}
+  body:has(.sp-map-fit) #roomPanel{position:static}
+}
+@media(max-width:700px){
+  body:has(.sp-map-fit) #view{padding-inline:12px}
+  body:has(.sp-map-fit) .sp-map-viewport{border-radius:9px}
+  body:has(.sp-map-fit) .sp-map-toolbar strong{font-size:15px}
 }
