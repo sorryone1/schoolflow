@@ -253,6 +253,25 @@ def ensure_plan_rooms():
 
 ensure_plan_rooms()
 
+def ensure_all_map_zones():
+    """Each clickable map polygon has a matching room record."""
+    zones = {
+        1:["Гардероб 2","Спортивный зал 2"],
+        2:["201","215","235","232","217","218","216"],
+        3:["305","303","302","301","304","310","310А","308","312","326","324"],
+        4:["405","403","411","411А","406","404","409","407","412","402"],
+    }
+    c=db()
+    try:
+        for floor, labels in zones.items():
+            for number in labels:
+                c.execute("INSERT OR IGNORE INTO rooms(number,floor,status) VALUES(?,?,'ok')",(number,floor))
+        c.commit()
+    finally:
+        c.close()
+
+ensure_all_map_zones()
+
 
 def token_for(user):
     return jwt.encode({"sub": str(user["id"]), "role": user["role"], "ver": int(user.get("session_version") or 0), "exp": datetime.now(timezone.utc) + timedelta(hours=12)}, SECRET, algorithm="HS256")
