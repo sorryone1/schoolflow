@@ -192,3 +192,15 @@ button,.btn,.card,.panel{box-shadow:none}
 .sp-room-label{font-weight:750}
 .sp-zone-link:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 @media(max-width:800px){.sp-map-large{width:165%;min-width:1050px}}
+
+
+/* No dragging, panning or zoom controls: one-tap room selection. */
+.sp-map-viewport{width:100%;max-width:100%;overflow:hidden!important;scrollbar-width:none!important}
+.sp-map-viewport::-webkit-scrollbar{display:none}
+.sp-map-fit,.sp-vector.sp-map-fit{width:100%!important;min-width:0!important;max-width:100%!important}
+.sp-map-fit svg{display:block;width:100%;height:auto;max-width:100%}
+.sp-map-toolbar{margin-bottom:12px}
+.sp-zone-link{cursor:pointer;touch-action:manipulation}
+.sp-zone-link .sp-zone{stroke-width:2;vector-effect:non-scaling-stroke}
+.sp-zone-link:hover .sp-zone,.sp-zone-link:focus-visible .sp-zone{stroke-width:3}
+@media(max-width:760px){.sp-map-viewport{border-radius:8px}.sp-map-fit,.sp-vector.sp-map-fit{min-width:0!important;width:100%!important}.sp-map-toolbar p{font-size:11px}}

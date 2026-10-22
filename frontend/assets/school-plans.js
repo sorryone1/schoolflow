@@ -162,7 +162,7 @@ function renderSchoolFloorPlan({ floor, rooms, mode, selRoom, maxRecent }) {
   const content=`<svg viewBox="0 0 1200 550" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Схема ${floor} этажа, интерактивная карта помещений" preserveAspectRatio="xMidYMid meet"><title>Интерактивный план ${floor} этажа</title><rect width="1200" height="550" rx="6" class="sp-canvas"/><path d="M45 58H1150 M45 491H1150" class="sp-outline"/>${structural}<text x="600" y="305" class="sp-corridor-title">К О Р И Д О Р</text>${fac}${layers}${exits}<text x="60" y="34" class="sp-title">${floor} ЭТАЖ</text><text x="1135" y="34" class="sp-title-suffix" text-anchor="end">СХЕМА ПОМЕЩЕНИЙ</text><text x="1135" y="527" class="sp-footnote" text-anchor="end">Не является планом эвакуации</text></svg>`;
   return html`<section class="sp-plan-wrap" aria-label="Интерактивный план">
     <div class="sp-map-toolbar"><div><strong>${floor} этаж · интерактивная схема</strong><p>Выберите помещение для просмотра заявок или создания новой</p></div></div>
-    <div class="sp-plan-scroll sp-map-viewport" tabindex="0" aria-label="Интерактивная карта этажа с горизонтальной прокруткой"><div class="sp-vector sp-map-large">${raw(content)}</div></div>
+    <div class="sp-plan-scroll sp-map-viewport" aria-label="Полная интерактивная схема этажа без прокрутки"><div class="sp-vector sp-map-fit">${raw(content)}</div></div>
     <p class="sp-hint">Выделенные комнаты открывают историю обращений. Схема ориентировочная, не является планом эвакуации.</p>
   </section>`;
 }
