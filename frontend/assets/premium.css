@@ -182,3 +182,13 @@ button,.btn,.card,.panel{box-shadow:none}
 .sp-map-viewport{scrollbar-width:thin}.sp-map-zoomable{min-width:690px;transition:width .15s ease}
 @media(max-width:760px){.more-v3-grid{grid-template-columns:1fr}.more-v3-item{min-height:72px;padding:12px}.rooms-overview-head{flex-wrap:wrap}.rooms-overview-list{max-height:200px}}
 @media(prefers-reduced-motion:reduce){.sp-map-zoomable,.more-v3-item{transition:none}}
+
+
+/* Bigger readable floor plan, no manual zoom needed. Scroll sideways on small screens. */
+.sp-map-viewport{overflow-x:auto;max-width:100%;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+.sp-map-large{width:155%;min-width:1100px;max-width:none}
+.sp-map-large svg{width:100%;height:auto}
+.sp-map-toolbar{margin-bottom:14px}
+.sp-room-label{font-weight:750}
+.sp-zone-link:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+@media(max-width:800px){.sp-map-large{width:165%;min-width:1050px}}
