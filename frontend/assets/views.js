@@ -53,7 +53,8 @@ const FRIENDLY = { rework: 'Возвращена на доработку', new: 
 const rowReq = r => { const t = S.user.role === 'teacher'; return html`<a class="row" href="#/request/${r.id}">${plate(r.room)}<div style="min-width:0"><div class="t">${r.description || r.detected_problem || 'Без описания'}</div>
   <div class="m">${t ? html`<span class="pill st-${r.status}">${FRIENDLY[r.status]}</span><span>${CAT[r.category] || ''}</span><span>${ago(r.created_at)}</span>` : html`${statusPill(r.status)}${prioTag(r.priority)}<span>${CAT[r.category] || ''}</span>${slaBadge(r)}`}</div></div><span class="mono muted sm">#${r.id}</span></a>`; };
 route('/', async () => {
-  const [reqs, rooms] = await Promise.all([api('/api/requests'), api('/api/rooms')]);
+  const [reqs, allRooms] = await Promise.all([api('/api/requests'), api('/api/rooms')]);
+  const rooms = allRooms.filter(mapRoomVisible);
   if (S.user.role === 'teacher') return teacherHome(reqs, rooms);
   if (S.user.role === 'worker') return workerHome(reqs);
   if (S.user.role === 'director') return directorHome();
@@ -341,8 +342,9 @@ FORM.newreq = async () => {
 };
 
 /* ================= план школы ================= */
+const mapRoomVisible = r => (SCHOOL_FLOOR_GEOMETRY[r.floor]?.zones || []).some(z => z.n === r.number || (SCHOOL_ZONE_ALIASES[z.n] || []).includes(r.number));
 route('/plan', async ({ q }) => {
-  const rooms = await api('/api/rooms'), selRoom = rooms.find(r => String(r.id) === q.room);
+  const rooms = (await api('/api/rooms')).filter(mapRoomVisible), selRoom = rooms.find(r => String(r.id) === q.room);
   const floor = +q.floor || (selRoom && selRoom.floor) || rooms[0]?.floor || 1, mode = q.mode === 'heat' ? 'heat' : 'status';
   const fr = rooms.filter(r => r.floor === floor), maxRecent = Math.max(1, ...rooms.map(r => r.recent));
   const cell = r => { const lvl = r.recent ? Math.ceil(r.recent / maxRecent * 4) : 0;
@@ -528,9 +530,3 @@ route('/rooms-settings', async () => {
 FORM.roomCreate = f => mutate(()=>api('/api/admin/rooms',{method:'POST',body:{number:$('#new-room-number').value.trim(),floor:Number($('#new-room-floor').value)}}),'Кабинет добавлен');
 ACT.removeRoom = el => {if(confirm('Удалить этот кабинет?')) mutate(()=>api('/api/admin/rooms/'+el.dataset.id,{method:'DELETE'}),'Кабинет удалён');};
 
-/* Map zoom: event delegation retains controls after navigation. */
-const SCHOOL_MAP_ZOOM = {value:1};
-function setSchoolMapZoom(value){const target=document.querySelector('.sp-map-zoomable');if(!target)return;SCHOOL_MAP_ZOOM.value=Math.max(1,Math.min(2.5,Math.round(value*10)/10));target.style.width=(SCHOOL_MAP_ZOOM.value*100)+'%';const reset=document.querySelector('[data-act="mapZoomReset"]');if(reset)reset.textContent=Math.round(SCHOOL_MAP_ZOOM.value*100)+'%';}
-ACT.mapZoomIn=()=>setSchoolMapZoom(SCHOOL_MAP_ZOOM.value+.2);
-ACT.mapZoomOut=()=>setSchoolMapZoom(SCHOOL_MAP_ZOOM.value-.2);
-ACT.mapZoomReset=()=>setSchoolMapZoom(1);
