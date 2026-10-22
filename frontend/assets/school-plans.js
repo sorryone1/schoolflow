@@ -8,7 +8,7 @@ const SCHOOL_FLOOR_GEOMETRY = {
     ],
     zones: [
       {n:'Гардероб',label:'ГАРДЕРОБ',x:55,y:96,w:155,h:145,t:'public',sub:'Верхняя зона'},
-      {n:'Гардероб',label:'ГАРДЕРОБ',x:55,y:327,w:155,h:130,t:'public',sub:'Нижняя зона'},
+      {n:'Гардероб 2',label:'ГАРДЕРОБ 2',x:55,y:327,w:155,h:130,t:'public',sub:'Нижняя зона'},
       {n:'Туалет МГН',label:'МГН',x:291,y:96,w:54,h:102,t:'service'},
       {n:'Мужской туалет',label:'М',x:360,y:96,w:61,h:102,t:'service',sub:'Туалет'},
       {n:'Женский туалет',label:'Ж',x:421,y:96,w:61,h:102,t:'service',sub:'Туалет'},
@@ -19,7 +19,7 @@ const SCHOOL_FLOOR_GEOMETRY = {
       {n:'Спортивный зал',label:'СПОРТИВНЫЙ',x:948,y:96,w:180,h:361,t:'public',sub:'ЗАЛ'},
       {n:'Зона мытья рук',label:'УМЫВАЛЬНИК',x:295,y:327,w:133,h:43,t:'public'},
       {n:'Обеденный зал',label:'ОБЕДЕННЫЙ ЗАЛ',x:428,y:327,w:243,h:130,t:'public'},
-      {n:'Спортивный зал',label:'СПОРТЗАЛ',x:760,y:327,w:149,h:130,t:'public',sub:'зона спортзала'}
+      {n:'Спортивный зал 2',label:'СПОРТЗАЛ 2',x:760,y:327,w:149,h:130,t:'public',sub:'зона спортзала'}
     ],
     facilities:[
       {k:'stair',x:210,y:125,w:50,h:110},{k:'stair',x:210,y:345,w:50,h:95},
@@ -58,7 +58,7 @@ const SCHOOL_FLOOR_GEOMETRY = {
       {n:'301',x:533,y:89,w:149,h:149,t:'study'},
       {n:'304',x:682,y:89,w:145,h:149,t:'study'},
       {n:'310',x:827,y:89,w:106,h:149,t:'study'},
-      {n:'310',x:933,y:89,w:119,h:149,t:'study'},
+      {n:'310А',x:933,y:89,w:119,h:149,t:'study'},
       {n:'308',x:293,y:350,w:268,h:128,t:'study',sub:'ФИЗИКА'},
       {n:'312',x:561,y:350,w:187,h:128,t:'study'},
       {n:'326',x:961,y:350,w:92,h:128,t:'study'},
@@ -77,7 +77,7 @@ const SCHOOL_FLOOR_GEOMETRY = {
       {n:'405',x:112,y:86,w:135,h:159,t:'study'},
       {n:'403',x:247,y:86,w:139,h:159,t:'study'},
       {n:'411',x:386,y:86,w:92,h:159,t:'study'},
-      {n:'411',x:478,y:86,w:95,h:159,t:'study'},
+      {n:'411А',x:478,y:86,w:95,h:159,t:'study'},
       {n:'406',x:573,y:86,w:139,h:159,t:'study'},
       {n:'404',x:712,y:86,w:132,h:159,t:'study'},
       {n:'409',x:844,y:86,w:187,h:159,t:'study',sub:'БИОЛОГИЯ'},
@@ -132,7 +132,7 @@ function schoolFacility(f) {
 
 function schoolDrawZone(z, r, floor, mode, selected, maxRecent) {
   const name = z.label || z.n;
-  const isNumber = /^\d+$/.test(z.n);
+  const isNumber = /^\d+[А-ЯA-Z]?$/.test(z.n);
   const lvl = mode === 'heat' ? (r && r.recent ? Math.max(1,Math.min(4,Math.ceil(r.recent / maxRecent*4))) : 0)
                              : (r ? Math.max(0,Math.min(4,Number(r.worst)||0)) : 0);
   const cls = `sp-zone sp-${z.t || 'study'} sp-${mode}-${lvl}${r ? ' sp-bound' : ' sp-no-record'}${selected && r && r.id === selected.id ? ' sp-selected' : ''}`;
@@ -161,9 +161,9 @@ function renderSchoolFloorPlan({ floor, rooms, mode, selRoom, maxRecent }) {
   const exits = (data.exits || []).map(([x,y]) => `<g class="sp-exit" transform="translate(${x} ${y})"><rect width="75" height="23" rx="3"/><text x="37.5" y="15">ВЫХОД</text></g>`).join('');
   const content=`<svg viewBox="0 0 1200 550" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Схема ${floor} этажа, интерактивная карта помещений" preserveAspectRatio="xMidYMid meet"><title>Интерактивный план ${floor} этажа</title><rect width="1200" height="550" rx="6" class="sp-canvas"/><path d="M45 58H1150 M45 491H1150" class="sp-outline"/>${structural}<text x="600" y="305" class="sp-corridor-title">К О Р И Д О Р</text>${fac}${layers}${exits}<text x="60" y="34" class="sp-title">${floor} ЭТАЖ</text><text x="1135" y="34" class="sp-title-suffix" text-anchor="end">СХЕМА ПОМЕЩЕНИЙ</text><text x="1135" y="527" class="sp-footnote" text-anchor="end">Не является планом эвакуации</text></svg>`;
   return html`<section class="sp-plan-wrap" aria-label="Интерактивный план">
-    <p class="sp-hint">Нажмите на помещение, чтобы увидеть заявки и создать новую. Все туалеты доступны для обращений. Схема составлена по фотографиям школьных стендов и не предназначена для эвакуации.</p>
-    <div class="sp-plan-scroll" tabindex="0" aria-label="Интерактивная схема этажа. На телефоне прокручивается горизонтально"><div class="sp-vector">${raw(content)}</div></div>
-    <p class="sp-hint">${mode === 'heat' ? 'Интенсивность цвета показывает количество обращений за последние 30 дней.' : 'Цвет помещения отражает приоритет активных заявок.'}</p>
+    <div class="sp-map-toolbar"><div><strong>${floor} этаж · интерактивная схема</strong><p>Выберите помещение для просмотра заявок или создания новой</p></div><div class="sp-map-tools"><button type="button" class="sp-zoom" data-act="mapZoomOut" aria-label="Уменьшить карту">−</button><button type="button" class="sp-zoom" data-act="mapZoomReset" aria-label="Сбросить масштаб">100%</button><button type="button" class="sp-zoom" data-act="mapZoomIn" aria-label="Увеличить карту">+</button></div></div>
+    <div class="sp-plan-scroll sp-map-viewport" tabindex="0" aria-label="Интерактивная карта этажа с горизонтальной прокруткой"><div class="sp-vector sp-map-zoomable">${raw(content)}</div></div>
+    <p class="sp-hint">Выделенные комнаты открывают историю обращений. Схема ориентировочная, не является планом эвакуации.</p>
     ${unshown.length ? html`<div class="sp-unshown"><span class="muted sm">Другие помещения в системе:</span><div class="chips">${unshown.map(r=>html`<a class="chip" href="${planUrl({floor,room:r.id,mode})}">${r.number}</a>`)}</div></div>` : ''}
   </section>`;
 }
