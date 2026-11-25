@@ -52,3 +52,70 @@
   .school-map-layout { grid-template-columns: minmax(0, 1fr); }
 }
 .school-room-panel { scroll-margin-top: 85px; }
+
+/* SchoolFlow navigation, floor plans and request analysis */
+.shell .topbar { background: var(--surface); }
+.shell .topbar-in { gap: clamp(10px, 2vw, 24px); }
+.shell .tabbar .tab-more.on { color: var(--accent); }
+.school-more { max-width: 1040px; margin-inline: auto; }
+.school-more-group + .school-more-group { margin-top: 28px; }
+.school-more-group h2 { font-size: 1.1rem; margin: 0 0 12px; }
+.school-more-group ul {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 10px; list-style: none; padding: 0; margin: 0;
+}
+.school-more-group a {
+  display: flex; align-items: center; gap: 12px; height: 100%; min-height: 84px;
+  padding: 14px; color: var(--ink); text-decoration: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+}
+.school-more-group a:is(:hover,:focus-visible) { background: var(--hover); border-color: var(--accent); }
+.school-more-group strong { display: block; font-size: 1rem; line-height: 1.3; }
+.school-more-group small { display: block; color: var(--ink-2); font-size: .875rem; margin-top: 3px; }
+.school-more-icon {
+  display: grid; place-items: center; flex: 0 0 41px; height: 41px; border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: var(--accent);
+}
+.school-plan-controls {
+  padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+}
+.school-plan-controls .chip { justify-content: center; }
+.school-plan-page #school-diagram { overflow: auto; }
+.school-plan-page #school-diagram.is-expanded .sp-vector { min-width: max(100%, 1140px); }
+.school-plan-page .sp-map-toolbar { margin-bottom: 8px; }
+.school-plan-page .sp-corridor-title { font: 650 14px var(--font); fill: var(--ink-2); dominant-baseline: middle; }
+.school-plan-page .sp-room-subtitle { letter-spacing: 0; }
+.school-plan-page .sp-zone.sp-public.sp-status-0 { fill: color-mix(in srgb, var(--accepted) 12%, var(--surface)); }
+.school-plan-page .sp-zone.sp-selected { paint-order: stroke; fill-opacity: .86; }
+.school-plan-page .sp-zone-link[aria-current=location] .sp-zone { stroke: var(--school-red); stroke-width: 3; paint-order: fill; }
+.school-plan-legend { gap: 8px 14px; line-height: 1.35; }
+.school-plan-legend i { border: 1px solid var(--line-2); }
+.school-plan-legend .sp-study { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+.school-plan-legend .sp-public { background: color-mix(in srgb, var(--accepted) 12%, var(--surface)); }
+.school-plan-legend .sp-service { background: color-mix(in srgb, var(--ink) 7%, var(--surface)); }
+.school-plan-legend .sp-status-1 { background: color-mix(in srgb, var(--low) 16%, var(--surface)); }
+.school-plan-legend .sp-status-2 { background: color-mix(in srgb, var(--med) 22%, var(--surface)); }
+.school-plan-legend .sp-status-3 { background: color-mix(in srgb, var(--high) 31%, var(--surface)); }
+.school-plan-legend .sp-status-4 { background: color-mix(in srgb, var(--crit) 34%, var(--surface)); }
+.school-plan-legend .sp-heat-0 { background: var(--surface); }
+.school-plan-legend .sp-heat-1 { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.school-plan-legend .sp-heat-4 { background: color-mix(in srgb, var(--accent) 62%, var(--surface)); }
+.school-room-directory li + li { border-top: 1px solid var(--line); }
+.school-room-directory li a[aria-current=location] { box-shadow: inset 3px 0 var(--school-red); }
+.school-room-directory li a { overflow-wrap: anywhere; }
+.ai-brief .ai-danger { margin-block: 12px 0; }
+.ai-brief .ai-diagnosis { margin: 14px 0; font-size: clamp(1.2rem, 2vw, 1.55rem); line-height: 1.35; overflow-wrap: anywhere; }
+.ai-brief .ai-group { min-width: 0; margin: 10px 0; overflow-wrap: anywhere; }
+.ai-brief-details { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+.ai-brief-details summary { cursor: pointer; color: var(--accent); font-weight: 650; }
+.ai-specialist { margin: 10px 0; color: var(--ink-2); }
+@media (max-width: 540px) {
+  .school-plan-controls { justify-content: flex-start; }
+  .school-floor-tabs { width: 100%; }
+  .school-floor-tabs .chip { flex: 1; padding-inline: 6px; min-height: 44px; }
+  .school-more-group a { min-height: 66px; }
+}
+.ai-pro.ai-brief { gap: 8px; padding: clamp(16px, 2.4vw, 24px); }
+.ai-brief .ai-group ul { font-size: .9375rem; }
+.ai-brief .ai-group h4 { font-size: .9375rem; }
+.ai-brief-details .chips { margin-top: 12px; }

@@ -187,14 +187,32 @@ function completeModal(id) {
     <div class="progress" id="c-prog" hidden><i></i></div></div><div class="mf"><button type="button" class="btn alt" data-act="closeModal">Отмена</button><button class="btn" id="c-btn">Завершить</button></div></form>`);
 }
 ACT.closeModal = closeModal;
-ACT.moreMenu = () => { location.hash = '#/more'; };
 route('/more', () => {
-  const entries = [...navMore(), ['/notifications','bell','Уведомления'], ['/profile','user','Мой профиль']]
-    .filter(([p],i,arr)=>arr.findIndex(x=>x[0]===p)===i);
-  const descriptions = {'/plan':'Кабинеты и заявки на карте','/analytics':'Статистика обращений','/notifications':'Новые события и сообщения','/profile':'Личные данные и настройки','/rooms-settings':'Список кабинетов и этажей','/settings':'Параметры приложения','/requests':'Все обращения','/inventory':'Материалы и остатки','/maintenance':'Плановые работы','/workers':'Сотрудники и нагрузка'};
-  return {title:'Ещё',html:html`${head({title:'Разделы',sub:'Всё необходимое в одном месте'})}
-    <div class="more-v3-head"><div><strong>Быстрый доступ</strong><p>Инструменты школы, настройки и ваш профиль</p></div><a href="#/" class="btn alt sm">← Обзор</a></div>
-    <div class="more-v3-grid">${entries.map(([p,i,l])=>html`<a class="more-v3-item" href="#${p}"><span class="more-v3-icon">${ic(i)}</span><span class="more-v3-copy"><strong>${l}</strong><small>${descriptions[p] || 'Открыть раздел'}</small></span><span class="more-v3-arrow">↗</span></a>`)}</div>`};
+  const entries = navMore().filter(([path]) => path !== '/demo');
+  const groups = [
+    ['Работа со школой', entries],
+    ['Мой аккаунт', [['/notifications', 'bell', 'Уведомления'], ['/profile', 'user', 'Профиль']]],
+  ];
+  if (navMore().some(([path]) => path === '/demo')) groups.push(['Демонстрация', [['/demo', 'play', 'Сценарий показа']]]);
+  const descriptions = {
+    '/passports': 'Оборудование и состояние помещений',
+    '/maintenance': 'График осмотров и выполненные работы',
+    '/analytics': 'Сроки и статистика обращений',
+    '/ai-usage': 'Результаты и расход запросов на анализ',
+    '/notifications': 'Обновления по заявкам',
+    '/profile': 'Пароль, тема и настройки',
+    '/demo': 'Пройти сценарий по ролям',
+  };
+  return { title: 'Ещё', html: html`<div class="school-more">
+    ${head({title:'Ещё'})}
+    ${groups.filter(([, links]) => links.length).map(([title, links]) => html`
+      <section class="school-more-group"><h2>${title}</h2>
+        <ul>${links.map(([path, icon, label]) => html`<li><a href="#${path}">
+          <span class="school-more-icon">${ic(icon)}</span>
+          <span><strong>${label}</strong><small>${descriptions[path]}</small></span>
+        </a></li>`)}</ul>
+      </section>`)}
+  </div>` };
 });
 ACT.fillRes = el => { const t = $('#c-res'); t.value = (t.value.trim() ? t.value.trim() + '. ' : '') + el.dataset.v; t.focus(); };
 FORM.complete = async f => {
@@ -223,20 +241,45 @@ function aiPanel(r) {
   if (r.ai_status === 'pending') return html`<section class="ai-pro" role="status"><b>✦ ИИ анализирует фотографию…</b><p class="muted">Заявка уже сохранена. Обновите карточку через несколько секунд.</p><button class="btn alt" data-act="reload">Обновить результат</button></section>`;
   if (r.ai_status === 'error') return html`<section class="ai-pro"><b>ИИ временно недоступен</b><p class="muted">Заявка сохранена; диагноз можно запросить повторно.</p><button class="btn alt" data-act="retryAI" data-id="${r.id}">Повторить ИИ-анализ</button></section>`;
   if (r.ai_status !== 'ok') return '';
-  const L = (title, value, icon) => { const a=aiList(value); return a.length ? html`<section class="ai-group"><h4>${icon} ${title}</h4><ul>${a.map(x=>html`<li>${x}</li>`)}</ul></section>` : ''; };
-  return html`<section class="ai-pro ai-enhanced" aria-label="Предварительный анализ искусственного интеллекта">
-    <div class="ai-pro-head"><span class="ai-logo" aria-hidden="true">✦</span><div><b>SchoolFlow AI</b><small>Предварительная визуальная диагностика</small></div><span class="ai-ready">Анализ завершён</span></div>
-    <p class="ai-kicker">ВОЗМОЖНАЯ НЕИСПРАВНОСТЬ</p><h3 class="ai-diagnosis">${r.detected_problem || 'Требуется осмотр'}</h3>
-    <div class="chips ai-chips">${r.ai_category && html`<span class="tag">${CAT[r.ai_category] || 'Другое'}</span>`}${r.ai_priority && html`<span class="tag">Приоритет ИИ: ${PRIO[r.ai_priority]}</span>`}${r.ai_estimated_minutes ? html`<span class="tag">≈ ${r.ai_estimated_minutes} мин</span>` : ''}${r.ai_specialist_required && html`<span class="tag">Специалист: ${r.ai_specialist_required}</span>`}</div>
-    ${r.ai_priority && r.ai_priority !== r.priority ? html`<p class="ai-warning">Внимание: оценка срочности ИИ отличается от выбранного приоритета. Проверьте вручную.</p>` : ''}
-    ${r.ai_danger_level ? html`<div class="ai-danger ai-danger-${r.ai_danger_level}" role="alert"><strong>${({low:'Низкая',medium:'Средняя',high:'Высокая',critical:'КРИТИЧЕСКАЯ'})[r.ai_danger_level] || 'Неизвестная'} степень опасности</strong><p>${r.ai_human_review ? 'Требуется срочная проверка ответственным человеком. Администрации отправлено уведомление внутри системы.' : 'Предварительная оценка по фотографии — не гарантия безопасности.'}</p></div>` : ''}
-    ${(S.user.role === 'teacher' || S.user.role === 'admin' || S.user.role === 'director') ? html`<div class="ai-role-teacher">${L('Что сделать учителю прямо сейчас',r.ai_teacher_actions,'☝')}</div>` : ''}
-    ${(S.user.role === 'worker' || S.user.role === 'admin' || S.user.role === 'director') ? html`<p class="ai-worker-notice">Подготовка работника: инструменты и материалы предварительные. Проверьте необходимость и безопасность работ на месте.</p>` : ''}
-    ${L('Важные предупреждения',r.ai_safety,'⚠')}
-    ${(S.user.role !== 'teacher') ? html`<div class="ai-pair ai-worker-kit">${L('Инструменты — взять с собой',r.ai_tools,'⚒')}${L('Материалы — уточнить по месту',r.ai_materials,'▤')}</div>` : ''}
-    ${S.user.role !== 'teacher' ? html`${L('Что проверить работнику',r.ai_checks,'✓')}${L('Предварительные действия работника',r.ai_actions,'→')}` : ''}
-    ${r.ai_answer ? html`<p class="ai-ok">Диагноз обновлён с учётом ответа: ${r.ai_answer}</p>` : ''}${r.ai_question ? html`<section class="ai-question"><h4>✦ Уточнение от ИИ</h4><p>${r.ai_question}</p>${r.ai_answer ? html`<div class="ai-answered"><b>Ответ:</b> ${r.ai_answer}</div>` : html`<form data-form="aiClarify" data-id="${r.id}"><label for="ai-answer-${r.id}" class="sr">Ответ на уточняющий вопрос</label><textarea class="input" id="ai-answer-${r.id}" rows="2" maxlength="500" required minlength="2" placeholder="Уточните, что происходит…"></textarea><button class="btn alt" type="submit">Уточнить диагноз с ИИ</button></form>`}</section>` : ''}
-    <p class="ai-disclaimer">ИИ анализирует видимые признаки, не проводит техническую проверку. Уверенность модели не гарантирует правильность диагноза. Решение принимает специалист.</p>
+  const role = S.user.role;
+  const level = r.ai_danger_level;
+  const danger = {low:'Низкая', medium:'Средняя', high:'Высокая', critical:'Критическая'}[level];
+  const urgent = level === 'high' || level === 'critical' || Boolean(r.ai_human_review);
+  const teacher = aiList(r.ai_teacher_actions);
+  const safety = aiList(r.ai_safety);
+  const checks = aiList(r.ai_checks);
+  const actions = aiList(r.ai_actions);
+  const immediate = urgent || role !== 'worker' ? teacher : [];
+  const workerSteps = role === 'teacher' ? [] : (checks.length ? checks : actions);
+  const visibleSteps = workerSteps.slice(0, 2);
+  const remaining = urgent ? [] : immediate.slice(2);
+  const list = (title, values) => values.length ? html`<section class="ai-group"><h4>${title}</h4><ul>${values.map(value => html`<li>${value}</li>`)}</ul></section>` : '';
+  const kit = html`${list('Инструменты', aiList(r.ai_tools))}${list('Материалы', aiList(r.ai_materials))}`;
+  const extra = html`${list('Дополнительные меры', remaining)}
+    ${(CAT[r.ai_category] || (role !== 'teacher' && r.ai_estimated_minutes)) && html`<div class="chips">
+      ${CAT[r.ai_category] && html`<span class="tag">${CAT[r.ai_category]}</span>`}
+      ${role !== 'teacher' && r.ai_estimated_minutes && html`<span class="tag">Ориентир по времени: ${r.ai_estimated_minutes} мин</span>`}
+    </div>`}
+    ${role !== 'teacher' && html`
+      ${str(kit) && html`<div class="ai-pair">${kit}</div>`}
+      ${list('Остальные проверки', checks.slice(2))}
+      ${list('Порядок работ', checks.length ? actions : actions.slice(2))}`}
+    ${r.ai_answer && !r.ai_question && html`<p class="ai-ok">Учтён ответ: ${r.ai_answer}</p>`}`;
+  return html`<section class="ai-pro ai-brief" aria-label="Предварительный анализ ИИ">
+    <div class="ai-pro-head"><span class="ai-logo" aria-hidden="true">✦</span><div><b>Анализ фото</b><small>Предварительная оценка ИИ</small></div></div>
+    ${(danger || urgent) && html`<div class="ai-danger ai-danger-${level || 'high'}" role="${urgent ? 'alert' : 'note'}">
+      <strong>${danger ? danger + ' опасность' : 'Требуется проверка'}</strong>
+      ${urgent && html`<p>Нужна срочная проверка ответственным специалистом.</p>`}
+    </div>`}
+    <h3 class="ai-diagnosis">${r.detected_problem || 'Требуется осмотр'}</h3>
+    ${list('Что сделать сейчас', urgent ? immediate : immediate.slice(0, 2))}
+    ${list('Предупреждения', safety)}
+    ${list(checks.length ? 'Что проверить в первую очередь' : 'С чего начать осмотр', visibleSteps)}
+    ${role !== 'teacher' && r.ai_specialist_required && html`<p class="ai-specialist"><strong>Профильный специалист</strong> · ${r.ai_specialist_required}</p>`}
+    ${r.ai_priority && r.ai_priority !== r.priority && html`<p class="ai-warning">ИИ предлагает приоритет «${PRIO[r.ai_priority] || 'Не указан'}». Проверьте срочность вручную.</p>`}
+    ${r.ai_question ? html`<section class="ai-question"><h4>✦ Уточнение от ИИ</h4><p>${r.ai_question}</p>${r.ai_answer ? html`<div class="ai-answered"><b>Ответ:</b> ${r.ai_answer}</div>` : html`<form data-form="aiClarify" data-id="${r.id}"><label for="ai-answer-${r.id}" class="sr">Ответ на уточняющий вопрос</label><textarea class="input" id="ai-answer-${r.id}" rows="2" maxlength="500" required minlength="2" placeholder="Уточните, что происходит…"></textarea><button class="btn alt" type="submit">Уточнить диагноз с ИИ</button></form>`}</section>` : ''}
+    ${str(extra).trim() && html`<details class="ai-brief-details"><summary>Подробности анализа</summary>${extra}</details>`}
+    <p class="ai-disclaimer">Результат требует проверки на месте. Решение о безопасности и ремонте принимает специалист.</p>
   </section>`;
 }
 ACT.retryAI = el => mutate(()=>api(`/api/requests/${el.dataset.id}/ai-retry`,{method:'POST'}),'Повторный анализ запущен');
@@ -355,7 +398,7 @@ route('/plan', async ({ q }) => {
       if (!selRoom) return;
       loadRoomPanel(selRoom);
       $('#roomPanel').focus({ preventScroll: true });
-      if (matchMedia('(max-width: 900px)').matches) $('#roomPanel').scrollIntoView({ block: 'start' });
+      if (matchMedia('(max-width: 900px)').matches) $('#roomPanel').scrollIntoView({ block: 'nearest' });
     },
     html: html`<section class="school-plan-page">
       ${head({ title: 'План школы', sub: 'Школа № 2098 · помещения и заявки на обслуживание' })}
@@ -365,14 +408,16 @@ route('/plan', async ({ q }) => {
         </nav>
         <nav class="school-floor-tabs" aria-label="Режим карты">
           <a class="chip ${mode === 'status' ? 'on' : ''}" aria-current="${mode === 'status' ? 'page' : 'false'}" href="${planUrl({ floor, room: selRoom?.id })}">Состояние</a>
-          <a class="chip ${mode === 'heat' ? 'on' : ''}" aria-current="${mode === 'heat' ? 'page' : 'false'}" href="${planUrl({ floor, room: selRoom?.id, mode: 'heat' })}">Заявки за 30 дней</a>
+          <a class="chip ${mode === 'heat' ? 'on' : ''}" aria-current="${mode === 'heat' ? 'page' : 'false'}" href="${planUrl({ floor, room: selRoom?.id, mode: 'heat' })}">Тепловая карта</a>
         </nav>
         ${S.user.role === 'admin' && html`<a class="lnk" href="#/rooms-settings">Управление помещениями</a>`}
       </div>
       <div class="school-map-layout">
         <div>${renderSchoolFloorPlan({ floor, rooms: floorRooms, mode, selRoom, maxRecent })}
-          <div class="legend">${mode === 'heat' ? html`<span><i style="background:var(--surface)"></i>нет заявок</span><span><i style="background:color-mix(in srgb,var(--accent) 10%,var(--surface))"></i>мало</span><span><i style="background:color-mix(in srgb,var(--accent) 42%,var(--surface))"></i>много</span><span><i style="background:color-mix(in srgb,var(--accent) 62%,var(--surface))"></i>очаг проблем</span>`
-            : html`<span><i style="background:var(--surface)"></i>без проблем</span><span><i style="background:color-mix(in srgb,var(--med) 24%,var(--surface))"></i>средний</span><span><i style="background:color-mix(in srgb,var(--high) 30%,var(--surface))"></i>высокий</span><span><i style="background:color-mix(in srgb,var(--crit) 34%,var(--surface))"></i>критический</span>`}</div>
+          <div class="legend school-plan-legend">${mode === 'heat' ? html`
+            <span><i class="sp-heat-0"></i>Нет заявок</span><span><i class="sp-heat-1"></i>Меньше заявок</span><span><i class="sp-heat-4"></i>Больше заявок</span>` : html`
+            <span><i class="sp-study"></i>Кабинет</span><span><i class="sp-public"></i>Общая зона</span><span><i class="sp-service"></i>Служебная зона</span>
+            <span><i class="sp-status-1"></i>Низкий</span><span><i class="sp-status-2"></i>Средний</span><span><i class="sp-status-3"></i>Высокий</span><span><i class="sp-status-4"></i>Критический</span>`}</div>
         </div>
         <div class="school-map-sidebar">
           <aside class="panel school-room-panel" id="roomPanel" tabindex="-1" aria-label="Выбранное помещение">
@@ -391,6 +436,11 @@ route('/plan', async ({ q }) => {
     </section>`
   };
 });
+ACT.togglePlanDetail = button => {
+  const expanded = $('#school-diagram').classList.toggle('is-expanded');
+  button.setAttribute('aria-pressed', String(expanded));
+  button.textContent = expanded ? 'Показать целиком' : 'Увеличить схему';
+};
 ACT.filterPlanRooms = input => {
   const query = input.value.trim().toLocaleLowerCase('ru');
   let count = 0;

@@ -200,10 +200,10 @@ function renderShell(path, content, title) {
     refreshBadge();
   }
   if (!window.__silent) closeModal();
-  const more = navMore();
-  $('#nav').innerHTML = str(html`${navMain().map(([p, i, l]) => html`<a href="#${p}" class="${isOn(p, path) ? 'on' : ''}">${l}</a>`)}${more.length && html`<button type="button" class="more-btn ${more.some(([p]) => isOn(p, path)) ? 'on' : ''}" data-act="moreMenu">Ещё ▾</button>`}`);
+  const moreActive = path === '/more' || navMore().some(([p]) => isOn(p, path));
+  $('#nav').innerHTML = str(html`${navMain().map(([p, i, l]) => html`<a href="#${p}" class="${isOn(p, path) ? 'on' : ''}">${l}</a>`)}<a href="#/more" class="more-btn ${moreActive ? 'on' : ''}" aria-current="${path === '/more' ? 'page' : 'false'}">Ещё</a>`);
   const tabs = TABS[S.user.role] || TABS.admin;
-  $('#tabbar').innerHTML = str(html`${tabs.map(([p, i, l]) => html`<a href="#${p}" class="${isOn(p, path) ? 'on' : ''}">${ic(i)}<span>${l}</span></a>`)}${more.length && html`<button type="button" class="tab-more" data-act="moreMenu">${ic('menu')}<span>Ещё</span></button>`}`);
+  $('#tabbar').innerHTML = str(html`${tabs.map(([p, i, l]) => html`<a href="#${p}" class="${isOn(p, path) ? 'on' : ''}">${ic(i)}<span>${l}</span></a>`)}<a href="#/more" class="tab-more ${moreActive ? 'on' : ''}" aria-current="${path === '/more' ? 'page' : 'false'}">${ic('menu')}<span>Ещё</span></a>`);
   $('#view').innerHTML = str(content);
   document.title = (title ? title + ' · ' : '') + 'Школа № 2098 · SchoolFlow'; afterRender();
   if (!window.__keepScroll) window.scrollTo(0, 0);
