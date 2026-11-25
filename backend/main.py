@@ -656,13 +656,15 @@ windows_doors, а не общий "требуется осмотр", и указ
 - Это предварительная рекомендация, окончательное решение принимает работник после осмотра.
 """
 
+        shupp_api = AI_BASE_URL == "https://api.shupp.ru/v1"
+        image_detail = "auto" if shupp_api else "high"
         responses_body = {
             "model": AI_MODEL,
             "input": [{
                 "role": "user",
                 "content": [
                     {"type": "input_text", "text": prompt},
-                    {"type": "input_image", "image_url": image_url, "detail": "high"}
+                    {"type": "input_image", "image_url": image_url, "detail": image_detail}
                 ]
             }]
         }
@@ -687,11 +689,12 @@ windows_doors, а не общий "требуется осмотр", и указ
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": image_url, "detail": "high"}}
+                    {"type": "image_url", "image_url": {"url": image_url, "detail": image_detail}}
                 ]
             }],
-            "temperature": 0.1
         }
+        if not shupp_api:
+            chat_body["temperature"] = 0.1
         try:
             payload = _ai_http_json(f"{AI_BASE_URL}/chat/completions", chat_body)
             text = _ai_text_from_response(payload)
