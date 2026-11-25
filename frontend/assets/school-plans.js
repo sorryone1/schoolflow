@@ -2,19 +2,20 @@
 /* Школа № 2098 · схема помещений по фотографиям стендов. */
 const SCHOOL_FLOOR_GEOMETRY = {
   1: {
+    corridorLabel:[800,282],
     corridors: [
-      [55,245,1065,70],[240,115,40,350],[695,245,65,205]
+      [55,245,893,70],[240,115,40,350],[695,245,65,205]
     ],
     zones: [
       {n:'Гардероб',label:'ГАРДЕРОБ',x:55,y:96,w:155,h:145,t:'public',sub:'Верхняя зона'},
       {n:'Гардероб 2',label:'ГАРДЕРОБ 2',x:55,y:327,w:155,h:130,t:'public',sub:'Нижняя зона'},
       {n:'Туалет МГН',label:'МГН',x:291,y:96,w:54,h:102,t:'service'},
-      {n:'Мужской туалет',label:'М',x:360,y:96,w:61,h:102,t:'service',sub:'Туалет'},
-      {n:'Женский туалет',label:'Ж',x:421,y:96,w:61,h:102,t:'service',sub:'Туалет'},
+      {n:'Мужской туалет',label:'WC М',x:360,y:96,w:61,h:102,t:'service',sub:'Туалет'},
+      {n:'Женский туалет',label:'WC Ж',x:421,y:96,w:61,h:102,t:'service',sub:'Туалет'},
       {n:'Кабинет врача',label:'МЕДПУНКТ',x:500,y:96,w:106,h:140,t:'public'},
       {n:'Мужская раздевалка',label:'МУЖСКАЯ',x:620,y:96,w:103,h:140,t:'public',sub:'раздевалка'},
       {n:'Женская раздевалка',label:'ЖЕНСКАЯ',x:723,y:96,w:103,h:140,t:'public',sub:'раздевалка'},
-      {n:'Душевая',label:'ДУШЕВЫЕ',x:826,y:96,w:93,h:102,t:'public'},
+      {n:'Душевая',label:'ДУШЕВАЯ',x:826,y:96,w:93,h:102,t:'public'},
       {n:'Спортивный зал',label:'СПОРТИВНЫЙ',x:948,y:96,w:180,h:361,t:'public',sub:'ЗАЛ'},
       {n:'Зона мытья рук',label:'УМЫВАЛЬНИК',x:295,y:327,w:133,h:43,t:'public'},
       {n:'Обеденный зал',label:'ОБЕДЕННЫЙ ЗАЛ',x:428,y:327,w:243,h:130,t:'public'},
@@ -33,10 +34,11 @@ const SCHOOL_FLOOR_GEOMETRY = {
     exits:[[53,264],[53,317],[241,478],[958,478]]
   },
   2: {
-    corridors:[[55,240,1075,105]],
+    corridorLabel:[517,290],
+    corridors:[[55,239,920,106]],
     zones:[
-      {n:'Туалет 2 эт. (Ж)',label:'Ж · WC',x:733,y:351,w:65,h:86,t:'service'},
-      {n:'Туалет 2 эт. (М)',label:'М · WC',x:668,y:351,w:65,h:86,t:'service'},
+      {n:'Туалет 2 эт. (Ж)',label:'WC Ж',x:733,y:351,w:65,h:86,t:'service'},
+      {n:'Туалет 2 эт. (М)',label:'WC М',x:668,y:351,w:65,h:86,t:'service'},
       {n:'201',x:55,y:86,w:282,h:153,t:'study'},
       {n:'215',x:337,y:86,w:262,h:153,t:'study',sub:'IT-ПОЛИГОН'},
       {n:'235',x:599,y:86,w:162,h:153,t:'study'},
@@ -57,10 +59,11 @@ const SCHOOL_FLOOR_GEOMETRY = {
     ]
   },
   3: {
-    corridors:[[77,238,1063,111]],
+    corridorLabel:[600,289],
+    corridors:[[77,238,1063,112]],
     zones:[
-      {n:'Туалет 3 эт. (Ж)',label:'Ж · WC',x:817,y:350,w:62,h:90,t:'service'},
-      {n:'Туалет 3 эт. (М)',label:'М · WC',x:748,y:350,w:69,h:90,t:'service'},
+      {n:'Туалет 3 эт. (Ж)',label:'WC Ж',x:817,y:350,w:62,h:90,t:'service'},
+      {n:'Туалет 3 эт. (М)',label:'WC М',x:748,y:350,w:69,h:90,t:'service'},
       {n:'305',x:107,y:89,w:144,h:149,t:'study'},
       {n:'303',x:251,y:89,w:140,h:149,t:'study'},
       {n:'302',x:391,y:89,w:142,h:149,t:'study'},
@@ -83,10 +86,11 @@ const SCHOOL_FLOOR_GEOMETRY = {
     ]
   },
   4: {
+    corridorLabel:[568,301],
     corridors:[[105,245,1040,112]],
     zones:[
-      {n:'Туалет 4 эт. (Ж)',label:'Ж · WC',x:812,y:357,w:67,h:87,t:'service'},
-      {n:'Туалет 4 эт. (М)',label:'М · WC',x:736,y:357,w:76,h:87,t:'service'},
+      {n:'Туалет 4 эт. (Ж)',label:'WC Ж',x:812,y:357,w:67,h:87,t:'service'},
+      {n:'Туалет 4 эт. (М)',label:'WC М',x:736,y:357,w:76,h:87,t:'service'},
       {n:'405',x:112,y:86,w:135,h:159,t:'study'},
       {n:'403',x:247,y:86,w:139,h:159,t:'study'},
       {n:'411',x:386,y:86,w:92,h:159,t:'study'},
@@ -131,8 +135,8 @@ function schoolZoneBadge(r, mode) {
   if (mode === 'heat') return r.recent ? `${r.recent} / 30 дн.` : 'нет заявок';
   return r.active ? `${r.active} ${roomWord(r.active)}` : 'нет проблем';
 }
-function schoolSvgRect(obj, cl) {
-  return `<rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" class="${cl}"/>`;
+function schoolSvgRect(obj, cl, radius = 0) {
+  return `<rect x="${obj.x}" y="${obj.y}" width="${obj.w}" height="${obj.h}" rx="${radius}" class="${cl}"/>`;
 }
 function schoolFacilityIcon(f) {
   const midX=f.x+f.w/2, midY=f.y+f.h/2;
@@ -153,13 +157,14 @@ function schoolDrawZone(z, r, floor, mode, selected, maxRecent) {
   const lvl = mode === 'heat' ? (r && r.recent ? Math.max(1,Math.min(4,Math.ceil(r.recent / maxRecent*4))) : 0)
                              : (r ? Math.max(0,Math.min(4,Number(r.worst)||0)) : 0);
   const cls = `sp-zone sp-${z.t || 'study'} sp-${mode}-${lvl}${r ? ' sp-bound' : ' sp-no-record'}${selected && r && r.id === selected.id ? ' sp-selected' : ''}`;
-  const labelLen=name.length, size=isNumber ? Math.min(25, z.w*.33) : Math.min(15,labelLen>14?z.w/12:z.w/8);
+  const size = Math.min(isNumber ? 28 : 17, (z.w - 8) / (name.length * .67));
+  const subSize = z.sub ? Math.min(12, (z.w - 8) / (z.sub.length * .63)) : 0;
   const x=z.x+z.w/2, y=z.y+z.h/2;
-  const subtitle=z.sub ? `<text x="${x}" y="${y+22}" class="sp-room-subtitle">${esc(z.sub)}</text>` : '';
-  const state=(r && (r.active || (mode==='heat' && r.recent))) ? `<circle class="sp-room-indicator" cx="${z.x+z.w-14}" cy="${z.y+14}" r="5"/>` : '';
+  const subtitle=z.sub ? `<text x="${x}" y="${y+size*.48+subSize}" style="font-size:${subSize}px" class="sp-room-subtitle">${esc(z.sub)}</text>` : '';
+  const state=(r && (mode === 'heat' ? r.recent : r.active)) ? `<circle class="sp-room-indicator" cx="${z.x+z.w-8}" cy="${z.y+8}" r="3.5"/>` : '';
   const title = `${schoolRoomName(z.n)}. ${r ? schoolZoneBadge(r,mode) : 'Нет в списке помещений — добавьте через управление кабинетами'}`;
-  const roomLabel=`<text x="${x}" y="${z.sub ? y-5 : y+8}" style="font-size:${size}px" class="sp-room-label">${esc(name)}</text>${subtitle}`;
-  const shape = schoolSvgRect(z,cls) + (z.k ? schoolFacilityIcon(z) : roomLabel) + state;
+  const roomLabel=`<text x="${x}" y="${z.sub ? y-subSize*.55 : y}" style="font-size:${size}px" class="sp-room-label">${esc(name)}</text>${subtitle}`;
+  const shape = schoolSvgRect(z,cls,3) + (z.k ? schoolFacilityIcon(z) : roomLabel) + state;
   return r
     ? `<a class="sp-zone-link" aria-current="${selected?.id === r.id ? 'location' : 'false'}" href="${esc(planUrl({floor,room:r.id,mode}))}" aria-label="${esc(title)}"><title>${esc(title)}</title>${shape}</a>`
     : `<g class="sp-zone-static" aria-label="${esc(title)}"><title>${esc(title)}</title>${shape}</g>`;
@@ -173,9 +178,17 @@ function renderSchoolFloorPlan({ floor, rooms, mode, selRoom, maxRecent }) {
   }).join('');
   const structural = data.corridors.map(c => schoolSvgRect({x:c[0],y:c[1],w:c[2],h:c[3]},'sp-corridor')).join('');
   const exits = (data.exits || []).map(([x,y]) => `<g class="sp-exit" transform="translate(${x} ${y})"><rect width="75" height="23" rx="3"/><text x="37.5" y="15">ВЫХОД</text></g>`).join('');
-  const content=`<svg viewBox="0 0 1200 550" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Схема ${floor} этажа, интерактивная карта помещений" preserveAspectRatio="xMidYMid meet"><title>Интерактивный план ${floor} этажа</title><rect width="1200" height="550" rx="6" class="sp-canvas"/><path d="M45 58H1150 M45 491H1150" class="sp-outline"/>${structural}<text x="600" y="305" class="sp-corridor-title">К О Р И Д О Р</text>${layers}${exits}<text x="60" y="34" class="sp-title">${floor} ЭТАЖ</text><text x="1135" y="34" class="sp-title-suffix" text-anchor="end">СХЕМА ПОМЕЩЕНИЙ</text><text x="1135" y="527" class="sp-footnote" text-anchor="end">Не является планом эвакуации</text></svg>`;
+  const [corridorX, corridorY] = data.corridorLabel;
+  const content = `<svg viewBox="30 70 1140 445" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Схема ${floor} этажа">
+    <rect x="30" y="70" width="1140" height="445" class="sp-canvas"/>
+    ${structural}
+    <text x="${corridorX}" y="${corridorY}" class="sp-corridor-title">Коридор</text>
+    ${layers}${exits}</svg>`;
   return html`<section class="sp-plan-wrap" aria-label="Интерактивный план">
-    <div class="sp-map-toolbar"><div><strong>${floor} этаж · интерактивная схема</strong><p>Нажмите на помещение на схеме или найдите его в списке</p></div></div>
-    <div class="sp-plan-scroll sp-map-viewport" aria-label="Полная интерактивная схема этажа без прокрутки"><div class="sp-vector sp-map-fit">${raw(content)}</div></div>
+    <div class="sp-map-toolbar"><strong>${floor} этаж</strong>
+      <button type="button" class="btn sm alt" data-act="togglePlanDetail" aria-controls="school-diagram" aria-pressed="false">Увеличить схему</button>
+    </div>
+    <div id="school-diagram" class="sp-plan-scroll sp-map-viewport" role="region" tabindex="0" aria-label="Интерактивная карта помещений"><div class="sp-vector sp-map-fit">${raw(content)}</div></div>
+    <p class="sp-hint">Схема для ориентации и заявок. Для эвакуации используйте официальный план школы.</p>
   </section>`;
 }
