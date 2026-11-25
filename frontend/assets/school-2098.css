@@ -1,0 +1,54 @@
+:root, :root[data-theme=dark] {
+  --school-blue: #254fa2;
+  --school-red: #e83126;
+}
+:root[data-theme=light] {
+  --accent: var(--school-blue);
+  --primary: var(--school-blue);
+  --focus: var(--school-blue);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme=dark]) {
+    --accent: var(--school-blue);
+    --primary: var(--school-blue);
+    --focus: var(--school-blue);
+  }
+}
+.school-brand { display: inline-flex; align-items: center; gap: 9px; white-space: nowrap; }
+.school-brand img { flex: none; border-radius: 50%; }
+.school-brand span { font-size: 1rem; line-height: 1.15; }
+.school-brand small { display: block; margin-top: 3px; font-size: .75rem; font-weight: 500; letter-spacing: .05em; }
+.auth-l.school-auth { background: radial-gradient(ellipse at 58% 41%, #2d58aa, #10274f 78%); color: #fff; }
+.school-auth .school-emblem { width: min(55%, 310px); height: auto; align-self: center; filter: drop-shadow(0 14px 30px #07163399); }
+.school-auth h2 { max-width: none; font-size: clamp(2rem, 4vw, 4rem); }
+.school-auth p { color: #e5edff; }
+.school-auth::after { display: none; }
+.school-auth .brand { align-self: flex-start; }
+.school-auth .brand span { border-left: 2px solid var(--school-red); padding-left: 9px; }
+@media (max-width: 760px) {
+  .school-auth .school-emblem { width: 90px; }
+  .school-auth h2 { font-size: 1.65rem; }
+  .school-auth p { margin-top: 8px; }
+}
+
+.school-map-layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(255px, 1fr); gap: 20px; align-items: start; }
+.school-map-sidebar { display: grid; gap: 16px; min-width: 0; }
+.school-plan-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.school-floor-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.school-plan-controls .chip { min-height: 40px; display: inline-flex; align-items: center; }
+.school-plan-controls .chip.on { background: var(--school-blue); border-color: var(--school-blue); color: #fff; }
+.school-plan-page .sp-map-viewport .sp-vector { width: 100%; min-width: 0; max-width: none; }
+.school-plan-page .sp-map-viewport .sp-vector svg { width: 100%; height: auto; max-height: none; }
+.school-plan-page .sp-zone.sp-service.sp-status-0 { fill: color-mix(in srgb, var(--ink) 7%, var(--surface)); }
+.school-plan-page .sp-zone.sp-study.sp-status-0 { fill: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+.school-plan-page .sp-zone.sp-selected { stroke: var(--school-red); }
+.school-plan-page .sp-facility { pointer-events: none; }
+.school-room-panel { border-top: 3px solid var(--school-red); }
+.school-room-directory ul { list-style: none; padding: 0; margin: 12px 0 0; max-height: 24rem; overflow: auto; }
+.school-room-directory li a { display: flex; flex-direction: column; gap: 3px; min-height: 44px; padding: 9px 10px; text-decoration: none; border-radius: 6px; }
+.school-room-directory li a:hover, .school-room-directory a[aria-current=location] { background: var(--hover); }
+.school-room-directory small { color: var(--ink-2); }
+@media (max-width: 900px) {
+  .school-map-layout { grid-template-columns: minmax(0, 1fr); }
+}
+.school-room-panel { scroll-margin-top: 85px; }

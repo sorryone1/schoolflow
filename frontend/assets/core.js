@@ -164,6 +164,8 @@ async function navigate() {
     renderShell(path, empty('Не удалось загрузить', e.message, html`<button class="btn" data-act="reload">Повторить</button>`));
   }
 }
+const schoolBrand = (href, cls = '') => html`<a class="brand school-brand ${cls}" href="${href}"><img src="/assets/school-2098-icon.webp" width="38" height="38" alt=""><span>Школа № 2098<small>SchoolFlow</small></span></a>`;
+
 function afterRender() { hydrateImages(); tickSla(); }
 
 /* ---------- оболочка ---------- */
@@ -191,7 +193,7 @@ function renderShell(path, content, title) {
   if (!$('#view')) {
     const u = S.user;
     $('#app').innerHTML = str(html`<div class="shell"><header class="topbar"><div class="topbar-in">
-      <a class="brand" href="#/">Школа<em>+</em></a><nav class="nav" id="nav" aria-label="Разделы"></nav>
+      ${schoolBrand('#/')}<nav class="nav" id="nav" aria-label="Разделы"></nav>
       <div class="topbar-r">${['teacher', 'admin'].includes(u.role) && html`<a class="cta" href="#/new">${ic('plus')}<span>Новая заявка</span></a>`}
         <a class="iconbtn" href="#/notifications" aria-label="Уведомления">${ic('bell')}<b class="dot" id="badge" hidden>0</b></a>
         <a class="me" href="#/profile" title="Профиль и выход"><span class="avatar">${initials(u.name)}</span><span class="me-name">${u.name.split(' ')[0]}</span></a></div></div></header><main id="view"></main><nav class="tabbar" id="tabbar" aria-label="Быстрая навигация"></nav></div>`);
@@ -203,7 +205,7 @@ function renderShell(path, content, title) {
   const tabs = TABS[S.user.role] || TABS.admin;
   $('#tabbar').innerHTML = str(html`${tabs.map(([p, i, l]) => html`<a href="#${p}" class="${isOn(p, path) ? 'on' : ''}">${ic(i)}<span>${l}</span></a>`)}${more.length && html`<button type="button" class="tab-more" data-act="moreMenu">${ic('menu')}<span>Ещё</span></button>`}`);
   $('#view').innerHTML = str(content);
-  document.title = (title ? title + ' · ' : '') + 'ШКОЛА+'; afterRender();
+  document.title = (title ? title + ' · ' : '') + 'Школа № 2098 · SchoolFlow'; afterRender();
   if (!window.__keepScroll) window.scrollTo(0, 0);
 }
 async function refreshBadge() {

@@ -11,25 +11,20 @@ function enter(token, user) {
 const roomWord = n => { const m = n % 10, c = n % 100; return m === 1 && c !== 11 ? 'заявка' : (m >= 2 && m <= 4 && (c < 12 || c > 14)) ? 'заявки' : 'заявок'; };
 
 /* ================= вход / регистрация ================= */
-function chalkPlan() {
-  const lit = new Set([1, 6]); let g = '';
-  for (let i = 0; i < 4; i++) for (const [row, y, base] of [[0, 28, 1], [1, 182, 5]]) {
-    const x = 36 + i * 122, n = 100 + (row ? i + 5 : i + 1), on = lit.has(i + row * 4);
-    g += `<rect x="${x}" y="${y}" width="112" height="90" rx="2" style="fill:${on ? 'var(--accent)' : 'none'};fill-opacity:${on ? .16 : 0}" ${on ? 'class="pl"' : ''} stroke="currentColor" stroke-width="1.5" stroke-dasharray="${on ? '0' : '6 5'}"/>`
-      + `<text x="${x + 10}" y="${y + 26}" style="fill:${on ? 'var(--accent)' : 'currentColor'}" font-family="Palatino Linotype,Georgia,serif" font-size="20" font-weight="600">${n}</text>`;
-  }
-  return raw(`<svg class="chalk" viewBox="0 0 560 300" role="img" aria-label="Схема этажа">${g}<text x="280" y="155" text-anchor="middle" fill="currentColor" fill-opacity=".6" font-family="ui-monospace,Consolas,monospace" font-size="12" letter-spacing="6">КОРИДОР</text></svg>`);
-}
-const authSide = html`<div class="auth-l"><a class="brand" href="#/login">Школа<em>+</em></a><div>${chalkPlan()}</div><div><h2>Каждая поломка — с номером, сроком и исполнителем.</h2><p>Заявки из кабинетов попадают к нужному работнику, а директор видит, где школе нужно внимание.</p></div></div>`;
+const authSide = html`<div class="auth-l school-auth">
+  ${schoolBrand('#/login')}
+  <img class="school-emblem" src="/assets/school-2098.webp" alt="Эмблема школы № 2098" width="512" height="512">
+  <div><h2>Школа № 2098</h2><p>Имени Героя Советского Союза Л. М. Доватора</p></div>
+</div>`;
 route('/login', () => html`<div class="auth">${authSide}<div class="auth-r"><form class="auth-f" data-form="login">
-  <a class="brand auth-brand" href="#/login">Школа<em>+</em></a>
+  ${schoolBrand('#/login', 'auth-brand')}
   <div><h1>Вход</h1><p class="muted" style="margin-top:4px">Введите логин и пароль.</p></div>
   <div class="fld"><label for="lg">Логин</label><input class="input" id="lg" autocomplete="username" autofocus required></div>
   <div class="fld"><label for="pw">Пароль</label><input class="input" id="pw" type="password" autocomplete="current-password" required><button type="button" class="btn ghost sm" data-act="togglePass" data-target="pw">Показать пароль</button></div>
   <button class="btn xl">Войти</button>
   <p class="muted">Нет аккаунта? <a href="#/register" class="lnk">Зарегистрироваться</a></p>
 </form></div></div>`, { auth: false });
-route('/register', () => html`<div class="auth">${authSide}<div class="auth-r"><form class="auth-f" data-form="register"><a class="brand auth-brand" href="#/login">Школа<em>+</em></a>
+route('/register', () => html`<div class="auth">${authSide}<div class="auth-r"><form class="auth-f" data-form="register">${schoolBrand('#/login', 'auth-brand')}
   <div><h1>Регистрация</h1><p class="muted" style="margin-top:4px">Пароль — не короче 6 символов.</p></div>
   <div class="fld"><label for="rn">Имя и фамилия</label><input class="input" id="rn" required minlength="2"></div>
   <div class="fld"><label for="rl">Логин</label><input class="input" id="rl" autocomplete="username" required minlength="3"></div>
@@ -224,13 +219,13 @@ ACT.doAssign = el => { const auto = !!el.dataset.auto, wid = auto ? 0 : +$('#as-
 
 /* ================= карточка заявки ================= */
 function aiPanel(r) {
-  if (r.ai_status === 'unavailable' && r.image) return html`<section class="ai-pro"><div class="ai-pro-head"><span class="ai-logo">✦</span><div><b>ШКОЛА+ AI</b><small>Анализ фотографии недоступен</small></div></div><p class="muted">Заявка сохранена. Диагностику выполнит работник.</p></section>`;
+  if (r.ai_status === 'unavailable' && r.image) return html`<section class="ai-pro"><div class="ai-pro-head"><span class="ai-logo">✦</span><div><b>SchoolFlow AI</b><small>Анализ фотографии недоступен</small></div></div><p class="muted">Заявка сохранена. Диагностику выполнит работник.</p></section>`;
   if (r.ai_status === 'pending') return html`<section class="ai-pro" role="status"><b>✦ ИИ анализирует фотографию…</b><p class="muted">Заявка уже сохранена. Обновите карточку через несколько секунд.</p><button class="btn alt" data-act="reload">Обновить результат</button></section>`;
   if (r.ai_status === 'error') return html`<section class="ai-pro"><b>ИИ временно недоступен</b><p class="muted">Заявка сохранена; диагноз можно запросить повторно.</p><button class="btn alt" data-act="retryAI" data-id="${r.id}">Повторить ИИ-анализ</button></section>`;
   if (r.ai_status !== 'ok') return '';
   const L = (title, value, icon) => { const a=aiList(value); return a.length ? html`<section class="ai-group"><h4>${icon} ${title}</h4><ul>${a.map(x=>html`<li>${x}</li>`)}</ul></section>` : ''; };
   return html`<section class="ai-pro ai-enhanced" aria-label="Предварительный анализ искусственного интеллекта">
-    <div class="ai-pro-head"><span class="ai-logo" aria-hidden="true">✦</span><div><b>ШКОЛА+ AI</b><small>Предварительная визуальная диагностика</small></div><span class="ai-ready">Анализ завершён</span></div>
+    <div class="ai-pro-head"><span class="ai-logo" aria-hidden="true">✦</span><div><b>SchoolFlow AI</b><small>Предварительная визуальная диагностика</small></div><span class="ai-ready">Анализ завершён</span></div>
     <p class="ai-kicker">ВОЗМОЖНАЯ НЕИСПРАВНОСТЬ</p><h3 class="ai-diagnosis">${r.detected_problem || 'Требуется осмотр'}</h3>
     <div class="chips ai-chips">${r.ai_category && html`<span class="tag">${CAT[r.ai_category] || 'Другое'}</span>`}${r.ai_priority && html`<span class="tag">Приоритет ИИ: ${PRIO[r.ai_priority]}</span>`}${r.ai_estimated_minutes ? html`<span class="tag">≈ ${r.ai_estimated_minutes} мин</span>` : ''}${r.ai_specialist_required && html`<span class="tag">Специалист: ${r.ai_specialist_required}</span>`}</div>
     ${r.ai_priority && r.ai_priority !== r.priority ? html`<p class="ai-warning">Внимание: оценка срочности ИИ отличается от выбранного приоритета. Проверьте вручную.</p>` : ''}
@@ -313,9 +308,9 @@ route('/new', async ({ q }) => {
       ['dragleave', 'drop'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.remove('over'); }));
       d.addEventListener('drop', e => setFile(e.dataTransfer.files[0]));
     },
-    html: html`${head({ crumb: html`<a href="#/requests">Заявки</a> / новая`, title: 'Сообщить о проблеме', sub: 'Выберите кабинет, опишите проблему и отправьте. Фото ускоряет ремонт.' })}
+    html: html`${head({ crumb: html`<a href="#/requests">Заявки</a> / новая`, title: 'Сообщить о проблеме', sub: 'Выберите помещение, опишите проблему и отправьте. Фото ускоряет ремонт.' })}
     <form class="form" data-form="newreq">
-      <div class="fs"><span class="lb">1. Кабинет</span><div class="chips" id="nr-recent"></div><div class="chips" id="nr-floors"></div><div class="roompick" id="nr-rooms"></div><div id="dup"></div></div>
+      <div class="fs"><span class="lb">1. Помещение</span><div class="chips" id="nr-recent"></div><div class="chips" id="nr-floors"></div><div class="roompick" id="nr-rooms"></div><div id="dup"></div></div>
       <div class="fs"><span class="lb">2. Что случилось</span><div class="chips">${Object.entries(CAT).map(([k, v]) => html`<button type="button" class="chip" data-act="nrCat" data-v="${k}" aria-pressed="${String(k === 'other')}">${v}</button>`)}</div>
         <textarea class="textarea" id="nr-desc" maxlength="1000" placeholder="Например: не работает розетка у окна, искрит при включении" aria-label="Описание" data-input="nrDraft"></textarea><span class="hint">Черновик сохраняется автоматически</span>
         <label class="drop" for="nr-file">${ic('cam')}<b>Перетащите фото или нажмите для выбора</b><span class="sm">JPG, PNG или WebP · до 8 МБ</span></label><input id="nr-file" type="file" accept="image/jpeg,image/png,image/webp" class="sr" data-change="nrFile"></div>
@@ -342,29 +337,76 @@ FORM.newreq = async () => {
 };
 
 /* ================= план школы ================= */
-const mapRoomVisible = r => (SCHOOL_FLOOR_GEOMETRY[r.floor]?.zones || []).some(z => z.n === r.number || (SCHOOL_ZONE_ALIASES[z.n] || []).includes(r.number));
+const mapRoomVisible = room => (SCHOOL_FLOOR_GEOMETRY[room.floor]?.zones || []).some(
+  zone => schoolFindRoom([room], zone.n)
+);
 route('/plan', async ({ q }) => {
-  const rooms = (await api('/api/rooms')).filter(mapRoomVisible), selRoom = rooms.find(r => String(r.id) === q.room);
-  const floor = +q.floor || (selRoom && selRoom.floor) || rooms[0]?.floor || 1, mode = q.mode === 'heat' ? 'heat' : 'status';
-  const fr = rooms.filter(r => r.floor === floor), maxRecent = Math.max(1, ...rooms.map(r => r.recent));
-  const cell = r => { const lvl = r.recent ? Math.ceil(r.recent / maxRecent * 4) : 0;
-    return html`<a class="rm ${mode === 'heat' ? 'h' + lvl : 'w' + r.worst} ${selRoom && selRoom.id === r.id ? 'sel' : ''}" href="${planUrl({ floor, room: r.id, mode })}"><b>${r.number}</b><span>${mode === 'heat' ? (r.recent ? r.recent + ' за 30 дн.' : '—') : (r.active ? r.active + ' ' + roomWord(r.active) : 'без проблем')}</span></a>`; };
+  const rooms = await api('/api/rooms');
+  const floors = Object.keys(SCHOOL_FLOOR_GEOMETRY).map(Number);
+  const requested = rooms.find(r => String(r.id) === q.room);
+  const floor = floors.includes(+q.floor) ? +q.floor : (floors.includes(requested?.floor) ? requested.floor : floors[0]);
+  const mode = q.mode === 'heat' ? 'heat' : 'status';
+  const floorRooms = rooms.filter(r => r.floor === floor);
+  const selRoom = floorRooms.find(r => r.id === requested?.id);
+  const maxRecent = Math.max(1, ...rooms.map(r => r.recent));
   return {
-    title: 'План школы', mount: () => selRoom && loadRoomPanel(selRoom.id),
-    html: html`${head({ title: 'План школы', sub: mode === 'heat' ? 'Тепловая карта: где за последние 30 дней заявок было больше всего.' : 'Текущее состояние кабинетов. Нажмите на кабинет, чтобы увидеть детали.' })}
-    ${S.user.role==='admin' ? html`<p class="pb"><a class="btn alt" href="#/rooms-settings">Управление кабинетами и этажами →</a></p>` : ''}<div class="floors">${[...new Set(rooms.map(r=>r.floor))].sort((a,b)=>a-b).map(f => html`<a class="chip ${f === floor ? 'on' : ''}" href="${planUrl({ floor: f, mode })}">${f} этаж</a>`)}<span style="flex:1"></span>
-      <div class="seg"><a href="${planUrl({ floor, room: selRoom?.id })}"><button aria-pressed="${String(mode === 'status')}">Состояние</button></a><a href="${planUrl({ floor, room: selRoom?.id, mode: 'heat' })}"><button aria-pressed="${String(mode === 'heat')}">Тепловая карта</button></a></div></div>
-    <div class="grid-d"><div>${renderSchoolFloorPlan({ floor, rooms: fr, mode, selRoom, maxRecent })}
-      <div class="legend">${mode === 'heat' ? html`<span><i style="background:var(--surface)"></i>нет заявок</span><span><i style="background:color-mix(in srgb,var(--chalk) 38%,var(--surface))"></i>мало</span><span><i style="background:color-mix(in srgb,var(--high) 45%,var(--surface))"></i>много</span><span><i style="background:color-mix(in srgb,var(--crit) 55%,var(--surface))"></i>очаг проблем</span>`
-        : html`<span><i style="background:var(--surface)"></i>без проблем</span><span><i style="background:color-mix(in srgb,var(--med) 24%,var(--surface))"></i>средний</span><span><i style="background:color-mix(in srgb,var(--high) 30%,var(--surface))"></i>высокий</span><span><i style="background:color-mix(in srgb,var(--crit) 34%,var(--surface))"></i>критический</span>`}</div></div>
-    <aside class="panel" id="roomPanel">${empty('Кабинет не выбран', 'Нажмите на кабинет на плане.')}</aside></div>`
+    title: 'План школы',
+    mount: () => {
+      if (!selRoom) return;
+      loadRoomPanel(selRoom);
+      $('#roomPanel').focus({ preventScroll: true });
+      if (matchMedia('(max-width: 900px)').matches) $('#roomPanel').scrollIntoView({ block: 'start' });
+    },
+    html: html`<section class="school-plan-page">
+      ${head({ title: 'План школы', sub: 'Школа № 2098 · помещения и заявки на обслуживание' })}
+      <div class="floors school-plan-controls">
+        <nav class="school-floor-tabs" aria-label="Этажи">
+          ${floors.map(f => html`<a class="chip ${f === floor ? 'on' : ''}" aria-current="${f === floor ? 'page' : 'false'}" href="${planUrl({ floor: f, mode })}">${f} этаж</a>`)}
+        </nav>
+        <nav class="school-floor-tabs" aria-label="Режим карты">
+          <a class="chip ${mode === 'status' ? 'on' : ''}" aria-current="${mode === 'status' ? 'page' : 'false'}" href="${planUrl({ floor, room: selRoom?.id })}">Состояние</a>
+          <a class="chip ${mode === 'heat' ? 'on' : ''}" aria-current="${mode === 'heat' ? 'page' : 'false'}" href="${planUrl({ floor, room: selRoom?.id, mode: 'heat' })}">Заявки за 30 дней</a>
+        </nav>
+        ${S.user.role === 'admin' && html`<a class="lnk" href="#/rooms-settings">Управление помещениями</a>`}
+      </div>
+      <div class="school-map-layout">
+        <div>${renderSchoolFloorPlan({ floor, rooms: floorRooms, mode, selRoom, maxRecent })}
+          <div class="legend">${mode === 'heat' ? html`<span><i style="background:var(--surface)"></i>нет заявок</span><span><i style="background:color-mix(in srgb,var(--accent) 10%,var(--surface))"></i>мало</span><span><i style="background:color-mix(in srgb,var(--accent) 42%,var(--surface))"></i>много</span><span><i style="background:color-mix(in srgb,var(--accent) 62%,var(--surface))"></i>очаг проблем</span>`
+            : html`<span><i style="background:var(--surface)"></i>без проблем</span><span><i style="background:color-mix(in srgb,var(--med) 24%,var(--surface))"></i>средний</span><span><i style="background:color-mix(in srgb,var(--high) 30%,var(--surface))"></i>высокий</span><span><i style="background:color-mix(in srgb,var(--crit) 34%,var(--surface))"></i>критический</span>`}</div>
+        </div>
+        <div class="school-map-sidebar">
+          <aside class="panel school-room-panel" id="roomPanel" tabindex="-1" aria-label="Выбранное помещение">
+            ${empty('Выберите помещение', 'Нажмите на схему или найдите помещение в списке.')}
+          </aside>
+          <section class="panel school-room-directory" aria-labelledby="school-room-list-title">
+            <h2 id="school-room-list-title">Помещения этажа</h2>
+            <div class="pb">
+              <label class="fld"><span>Название или номер</span><input class="input" type="search" data-input="filterPlanRooms" placeholder="Например, туалет"></label>
+              <p class="muted" id="school-no-rooms" role="status" hidden>Помещения не найдены</p>
+              <ul id="school-room-list">${floorRooms.map(r => html`<li><a href="${planUrl({ floor, room: r.id, mode })}" aria-current="${selRoom?.id === r.id ? 'location' : 'false'}"><strong>${schoolRoomName(r.number)}</strong><small>${schoolZoneBadge(r,mode)}</small></a></li>`)}</ul>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>`
   };
 });
-async function loadRoomPanel(id) {
-  const el = $('#roomPanel'); el.innerHTML = str(skeleton(3));
+ACT.filterPlanRooms = input => {
+  const query = input.value.trim().toLocaleLowerCase('ru');
+  let count = 0;
+  for (const item of document.querySelectorAll('#school-room-list li')) {
+    item.hidden = !item.querySelector('strong').textContent.toLocaleLowerCase('ru').includes(query);
+    if (!item.hidden) count++;
+  }
+  $('#school-no-rooms').hidden = count > 0;
+};
+async function loadRoomPanel(room) {
+  const el = $('#roomPanel');
+  const heading = html`<h2>${schoolRoomName(room.number)}<span class="mono">${room.floor} этаж</span></h2>`;
+  el.innerHTML = str(html`${heading}${skeleton(3)}`);
   try {
-    const d = await api(`/api/rooms/${id}/summary`), r = d.room;
-    el.innerHTML = str(html`<h2>Кабинет ${r.number}<span class="mono">${r.floor} этаж</span></h2><div class="pb" style="display:grid;gap:12px"><div style="display:flex;gap:8px;flex-wrap:wrap">${canCreate() && html`<a class="btn sm" href="#/new?room=${r.id}">${ic('plus')}Заявка</a>`}<button class="btn sm alt" data-act="qr" data-id="${r.id}" data-number="${r.number}">${ic('qr')}QR-код</button></div>
+    const d = await api(`/api/rooms/${room.id}/summary`), r = d.room;
+    el.innerHTML = str(html`${heading}<div class="pb" style="display:grid;gap:12px"><p class="muted">${schoolZoneBadge(room, 'status')}</p><div style="display:flex;gap:8px;flex-wrap:wrap">${canCreate() && html`<a class="btn sm" href="#/new?room=${r.id}">${ic('plus')}Создать заявку</a>`}<button class="btn sm alt" data-act="qr" data-id="${r.id}" data-number="${r.number}">${ic('qr')}QR-код</button></div>
       <div class="chips">${d.categories.length ? d.categories.map(c => html`<span class="tag">${CAT[c.category] || 'Другое'} · ${c.count}</span>`) : html`<span class="muted sm">Обращений ещё не было</span>`}</div></div>
       <div class="rows" style="border-top:1px solid var(--line)">${d.requests.length ? d.requests.slice(0, 6).map(x => rowReq({ ...x, room: r.number })) : ''}</div>`);
     tickSla();
@@ -372,8 +414,8 @@ async function loadRoomPanel(id) {
 }
 ACT.qr = el => {
   const { id, number } = el.dataset;
-  modal(html`<div class="mh">QR-код · кабинет ${number}<button class="btn ghost sm no-print" data-act="closeModal" aria-label="Закрыть">${ic('x')}</button></div><div class="mb" style="justify-items:center;text-align:center">
-    <img data-src="/api/rooms/${id}/qr?base=${encodeURIComponent(location.origin)}" alt="QR-код кабинета ${number}" style="width:240px;height:240px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:8px">
+  modal(html`<div class="mh">QR-код · ${schoolRoomName(number)}<button class="btn ghost sm no-print" data-act="closeModal" aria-label="Закрыть">${ic('x')}</button></div><div class="mb" style="justify-items:center;text-align:center">
+    <img data-src="/api/rooms/${id}/qr?base=${encodeURIComponent(location.origin)}" alt="QR-код · ${schoolRoomName(number)}" style="width:240px;height:240px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:8px">
     <div><b>Кабинет ${number}</b><p class="sm muted">Сканирование откроет форму заявки сразу для этого кабинета.</p>${/^(127\.|localhost)/.test(location.hostname) ? html`<p class="sm muted no-print" style="margin-top:6px">Чтобы код работал с телефонов, запустите систему через start_lan.bat и откройте её по адресу компьютера в школьной сети.</p>` : ''}</div></div>
     <div class="mf no-print"><button class="btn" onclick="window.print()">Печать</button></div>`);
 };
