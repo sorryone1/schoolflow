@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 import hashlib, secrets, hmac
 from pathlib import Path
 from PIL import Image
-import sqlite3, uuid, shutil, jwt, os, json, base64, mimetypes, re, time
+import sqlite3, uuid, jwt, os, json, base64, mimetypes, re, time
 from datetime import datetime, timedelta, timezone
 
 BASE = Path(__file__).resolve().parent
@@ -34,7 +34,6 @@ def _load_secret():
 
 SECRET = _load_secret()
 DEMO_MODE = os.getenv("DEMO_MODE", "1") == "1"  # Local presentation default; disable for production
-ALLOW_WORKER_SIGNUP = os.getenv("ALLOW_WORKER_SIGNUP", "0") != "0"
 # AI provider is OpenAI-compatible. Default is the user's DarkAPI gateway.
 AI_API_KEY = (os.getenv("DARKAPI_API_KEY") or os.getenv("OPENAI_API_KEY") or "").strip()
 AI_BASE_URL = (os.getenv("DARKAPI_BASE_URL") or os.getenv("OPENAI_BASE_URL") or "https://darkapi.shop/v1").strip().rstrip("/")
@@ -219,15 +218,6 @@ def init():
     for idx in ("requests(user_id)", "requests(worker_id)", "requests(room_id)", "requests(status)",
                 "notifications(user_id)", "audit_log(request_id)", "comments(request_id)"):
         c.execute(f"CREATE INDEX IF NOT EXISTS idx_{idx.replace('(', '_').replace(')', '')} ON {idx}")
-    c.execute("""CREATE TABLE IF NOT EXISTS teacher_invites(
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      token_hash TEXT NOT NULL UNIQUE,
-      created_by INTEGER NOT NULL,
-      created_at TEXT NOT NULL,
-      expires_at TEXT NOT NULL,
-      used_at TEXT,
-      used_by INTEGER
-    )""")
     c.commit(); c.close()
 
 
@@ -332,8 +322,8 @@ def register(x: Register):
     c = db()
     try:
         # Public signup never controls role or access. Admin explicitly approves the account.
-        cur = c.execute("INSERT INTO users(name,login,password_hash,role,approved) VALUES(?,?,?,?,0)",
-                        (name, login, hash_password(password), 'teacher'))
+        c.execute("INSERT INTO users(name,login,password_hash,role,approved) VALUES(?,?,?,?,0)",
+                  (name, login, hash_password(password), 'teacher'))
         c.commit()
         return {"ok": True, "pending": True, "message": "Заявка на регистрацию отправлена администратору"}
     except sqlite3.IntegrityError:
@@ -917,7 +907,6 @@ def notifications(authorization: str | None = Header(None)):
     u=current_user(authorization); c=db(); now=datetime.now();
     # Generate at most one SLA warning per request/user in a six-hour window.
     rows = c.execute("SELECT id,user_id,worker_id,created_at,priority,status FROM requests WHERE status NOT IN ('done','rejected')").fetchall()
-    target_ids = {u['id']}
     for r in rows:
         if u['role']=='teacher' and r['user_id'] != u['id']:
             continue
@@ -1261,10 +1250,8 @@ def _csv_cell(v):
 def export_director_pdf(authorization: str | None = Header(None)):
     u=current_user(authorization)
     if u['role'] not in ('admin','director'): raise HTTPException(403,'Недостаточно прав')
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
-    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER
     from reportlab.lib.pagesizes import A4
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont

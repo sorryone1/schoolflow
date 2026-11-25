@@ -58,10 +58,8 @@ html{scroll-padding-top:88px}body{font:15.5px/1.55 var(--font);letter-spacing:-.
 /* Final defense polish: readable actions and administration */
 .request-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center;justify-content:flex-end}.request-actions .btn{white-space:nowrap}
 .request-open-title{display:block;color:var(--ink);text-decoration:none;font-weight:720;line-height:1.42}.request-open-title:hover{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
-.invite-panel{background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 7%,var(--surface)),var(--surface))}.invite-panel>p{margin:9px 0 16px}.invite-result:not(:empty){margin-top:16px;border:1px solid var(--line-2);border-radius:14px;padding:14px;background:var(--bg)}
-.invite-code{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}.invite-code b{overflow-wrap:anywhere;font-size:clamp(16px,2vw,22px);letter-spacing:.045em;color:var(--accent)}
 .more-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:18px}.more-list a{display:flex;align-items:center;gap:11px;min-height:56px;padding:14px;border:1px solid var(--line);border-radius:14px;text-decoration:none;color:var(--ink);background:var(--surface);font-weight:650}.more-list a:hover{border-color:var(--accent);background:var(--hover)}.more-list a .ic{color:var(--accent)}
-@media(max-width:760px){.more-list{grid-template-columns:1fr;padding:12px}.request-actions{justify-content:flex-start}.request-actions .btn{min-height:42px}.tbl td:last-child{min-width:190px}.invite-code{align-items:stretch}.invite-code button{width:100%}}
+@media(max-width:760px){.more-list{grid-template-columns:1fr;padding:12px}.request-actions{justify-content:flex-start}.request-actions .btn{min-height:42px}.tbl td:last-child{min-width:190px}}
 
 /* SchoolFlow final: role dashboards, notifications, responsive AI */
 .director-ledger{margin-bottom:20px}.critical-panel{border-top:3px solid var(--crit)}.dashboard-shortcuts{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
